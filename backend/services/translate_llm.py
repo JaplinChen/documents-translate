@@ -218,6 +218,7 @@ def _build_contract(
                 "block_type": block.get("block_type"),
                 "source_text": block.get("source_text", ""),
                 "translated_text": translated_text,
+                "client_id": block.get("client_id"),
             }
         )
     return {
@@ -539,6 +540,8 @@ def translate_blocks(
                 for (original, mapping), translated in zip(
                     zip(chunk, placeholder_maps), result["blocks"]
                 ):
+                    if "client_id" not in translated and original[1].get("client_id"):
+                        translated["client_id"] = original[1].get("client_id")
                     translated_text = translated.get("translated_text", "")
                     translated_text = _restore_placeholders(translated_text, mapping)
                     if glossary:

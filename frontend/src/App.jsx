@@ -158,7 +158,15 @@ function App() {
     [block.slide_index ?? "", block.shape_id ?? "", block.block_type ?? ""].join("|");
   const buildBlockUid = (block, fallbackIndex) =>
     block._uid ||
+    block.client_id ||
     `${block.slide_index ?? "x"}-${block.shape_id ?? "x"}-${block.block_type ?? "x"}-${fallbackIndex}`;
+  const resolveOutputMode = (block) => {
+    if (block.output_mode) {
+      return block.output_mode;
+    }
+    const translatedText = (block.translated_text || "").trim();
+    return translatedText ? "translated" : "source";
+  };
 
   const defaultBaseUrl = useMemo(() => {
     if (llmProvider === "gemini") {
@@ -319,9 +327,11 @@ function App() {
       const nextBlocks = (data.blocks || []).map((block, idx) => {
         const translatedText = (block.translated_text || "").trim();
         const outputMode = block.output_mode || (translatedText ? "translated" : "source");
+        const uid = buildBlockUid(block, idx);
         return {
           ...block,
-          _uid: buildBlockUid(block, idx),
+          _uid: uid,
+          client_id: block.client_id || uid,
           selected: block.selected !== false,
           output_mode: outputMode
         };
@@ -439,14 +449,14 @@ function App() {
       }
       const translatedMap = new Map();
       translated.forEach((item) => {
-        const key = buildBlockKey(item);
+        const key = item.client_id || buildBlockKey(item);
         if (!translatedMap.has(key)) {
           translatedMap.set(key, []);
         }
         translatedMap.get(key).push(item);
       });
       const merged = blocks.map((block, index) => {
-        const key = buildBlockKey(block);
+        const key = block.client_id || buildBlockKey(block);
         const bucket = translatedMap.get(key);
         const matched = bucket && bucket.length ? bucket.shift() : translated[index];
         const translatedText = matched?.translated_text || block.translated_text || "";
@@ -457,6 +467,7 @@ function App() {
           (!normalizedTranslated || normalizedTranslated === sourceText ? "source" : "translated");
         return {
           ...block,
+          client_id: block.client_id || matched?.client_id || buildBlockUid(block, index),
           translated_text: translatedText,
           output_mode: outputMode
         };
@@ -594,7 +605,7 @@ function App() {
       const applyBlocks =
         mode === "correction"
           ? blocks.map((block) =>
-              block.output_mode === "source"
+              resolveOutputMode(block) === "source"
                 ? { ...block, apply: false }
                 : block
             )
@@ -668,9 +679,11 @@ function App() {
         const nextBlocks = parsed.map((block, idx) => {
           const translatedText = (block.translated_text || "").trim();
           const outputMode = block.output_mode || (translatedText ? "translated" : "source");
+          const uid = buildBlockUid(block, idx);
           return {
             ...block,
-            _uid: buildBlockUid(block, idx),
+            _uid: uid,
+            client_id: block.client_id || uid,
             selected: block.selected !== false,
             output_mode: outputMode
           };
@@ -1072,7 +1085,7 @@ function App() {
                               <label className="toggle-check">
                                 <input
                                   type="checkbox"
-                                  checked={(block.output_mode || "translated") === "source"}
+                                  checked={resolveOutputMode(block) === "source"}
                                   onChange={() => handleOutputModeChange(index, "source")}
                                 />
                                 <span>輸出</span>
@@ -1088,7 +1101,7 @@ function App() {
                               <label className="toggle-check">
                                 <input
                                   type="checkbox"
-                                  checked={(block.output_mode || "translated") === "translated"}
+                                  checked={resolveOutputMode(block) === "translated"}
                                   onChange={() => handleOutputModeChange(index, "translated")}
                                 />
                                 <span>輸出</span>

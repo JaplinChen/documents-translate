@@ -11,6 +11,7 @@ class PPTXBlock(BaseModel):
     block_type: Literal["textbox", "table_cell", "notes"]
     source_text: str
     translated_text: str = ""
+    client_id: str | None = None
     mode: Literal["direct", "bilingual", "correction"] = "direct"
 
 
