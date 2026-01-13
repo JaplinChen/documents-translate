@@ -552,7 +552,13 @@ function App() {
       );
       setStatus(changed ? "翻譯完成" : "翻譯回傳無變更，請確認語言與模型");
     } catch (error) {
-      setStatus(error?.message ? `翻譯失敗：${error.message}` : "翻譯失敗，請稍後再試");
+      const errorMsg = error?.message || "";
+      if (errorMsg.toLowerCase().includes("image") || errorMsg.includes("圖片")) {
+        setStatus(`翻譯失敗：${errorMsg}`);
+        alert(`翻譯失敗：\n\n${errorMsg}\n\n解決方案：\n請在 LLM 設定中選擇「GPT-4o (支援圖片)」或「Gemini」等支援多模態的模型。`);
+      } else {
+        setStatus(errorMsg ? `翻譯失敗：${errorMsg}` : "翻譯失敗，請稍後再試");
+      }
     } finally {
       setBusy(false);
     }

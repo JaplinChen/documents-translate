@@ -409,7 +409,13 @@ async def pptx_translate(
             base_url=base_url,
         )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        error_msg = str(exc)
+        if "image" in error_msg.lower():
+            raise HTTPException(
+                status_code=400,
+                detail="翻譯失敗：偵測到圖片相關錯誤。您的 PPTX 可能包含圖片，但目前使用的模型不支援圖片輸入。請在 LLM 設定中選擇支援視覺的模型（如 GPT-4o）。"
+            ) from exc
+        raise HTTPException(status_code=400, detail=error_msg) from exc
     return {
         "mode": mode,
         "source_language": source_language,

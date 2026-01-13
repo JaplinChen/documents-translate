@@ -641,6 +641,22 @@ def translate_blocks(
                 break
             except Exception as exc:
                 duration = time.perf_counter() - attempt_started
+                error_msg = str(exc)
+
+                if "image" in error_msg.lower() or "vision" in error_msg.lower():
+                    LOGGER.error(
+                        "LLM 翻譯失敗：偵測到圖片相關錯誤。 "
+                        "您選擇的模型可能不支援圖片輸入。 "
+                        "請嘗試使用 GPT-4o 或 Gemini 1.5 Pro 等支援多模態的模型。 "
+                        "錯誤详情: %s",
+                        error_msg,
+                    )
+                    raise ValueError(
+                        "偵測到圖片相關錯誤。您的 PPTX 可能包含圖片，"
+                        "但目前使用的模型不支援圖片輸入。 "
+                        "請在 LLM 設定中選擇支援視覺的模型（如 GPT-4o）。"
+                    ) from exc
+
                 LOGGER.warning(
                     "LLM chunk %s attempt %s failed in %.2fs: %s",
                     chunk_index,
