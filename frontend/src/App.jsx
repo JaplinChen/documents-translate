@@ -391,7 +391,7 @@ function App() {
 
   const handleExtract = async () => {
     if (!file) {
-      setStatus("請先選擇 PPTX 檔案");
+      setStatus("請先選擇檔案");
       return;
     }
     const fileName = file.name.toLowerCase();
@@ -907,7 +907,7 @@ function App() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      setStatus("已輸出 PPTX 檔案");
+      setStatus("已輸出翻譯檔案");
     } catch (error) {
       setStatus("套用失敗，請稍後再試");
     } finally {
@@ -1043,13 +1043,13 @@ function App() {
 
           <div className="form-group">
             <label className="field-label" htmlFor="pptx-file">
-              PPTX 檔案
+              選擇檔案 (PPTX 或 PDF)
             </label>
             <input
               id="pptx-file"
               className="file-input"
               type="file"
-              accept=".pptx"
+              accept=".pptx,.pdf"
               onChange={(event) => setFile(event.target.files?.[0] || null)}
             />
           </div>
