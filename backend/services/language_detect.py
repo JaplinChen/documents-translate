@@ -87,7 +87,17 @@ def detect_document_languages(blocks: Iterable[dict]) -> dict:
     counts: Counter[str] = Counter()
     first_line_counts: Counter[str] = Counter()
     second_line_counts: Counter[str] = Counter()
-    for block in blocks:
+
+    # Optimization: If too many blocks, sample them to avoid long wait times
+    blocks_list = list(blocks)
+    if len(blocks_list) > 50:
+        # Take first 20, middle 10, last 20
+        mid = len(blocks_list) // 2
+        sampled_blocks = blocks_list[:20] + blocks_list[mid : mid + 10] + blocks_list[-20:]
+    else:
+        sampled_blocks = blocks_list
+
+    for block in sampled_blocks:
         text = block.get("source_text", "")
         lines = [line for line in text.splitlines() if line.strip()]
         for idx, line in enumerate(lines):

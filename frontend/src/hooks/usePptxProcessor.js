@@ -147,7 +147,47 @@ export function usePptxProcessor({
 
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) break;
+                if (done) {
+                    if (buffer.trim()) {
+                        // Process remaining buffer
+                        const lines = buffer.split("\n\n");
+                        for (const line of lines) {
+                            if (!line.trim()) continue;
+                            const eventMatch = line.match(/^event: (.*)$/m);
+                            const dataMatch = line.match(/^data: (.*)$/m);
+                            if (eventMatch && dataMatch) {
+                                const eventType = eventMatch[1];
+                                const eventData = JSON.parse(dataMatch[1]);
+                                if (eventType === "complete") {
+                                    const finalResult = eventData.blocks || [];
+                                    const nextBlocks = currentBlocks.map((b, i) => ({
+                                        ...b,
+                                        translated_text: finalResult[i]?.translated_text || b.translated_text,
+                                        isTranslating: false,
+                                        updatedAt: finalResult[i]?.translated_text ? new Date().toLocaleTimeString("zh-TW", { hour12: false }) : b.updatedAt
+                                    }));
+                                    setBlocks(nextBlocks);
+                                    setProgress(100);
+                                    setStatus("翻譯完成");
+                                    setBusy(false);
+                                    return;
+                                } else if (eventType === "error") {
+                                    throw new Error(eventData.detail || "串流發生錯誤");
+                                }
+                            }
+                        }
+                    }
+
+                    // If done and still busy (no complete event), treat as interruption
+                    setBusy((prevBusy) => {
+                        if (prevBusy) {
+                            setStatus("連線已中斷 (未收到完成訊號)");
+                            // Optional: Retry?
+                        }
+                        return false;
+                    });
+                    break;
+                }
 
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split("\n\n");

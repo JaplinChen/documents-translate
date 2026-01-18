@@ -49,6 +49,7 @@ def build_prompt(
     context: dict | None,
     preferred_terms: list[tuple[str, str]] | None = None,
     placeholder_tokens: list[str] | None = None,
+    language_hint: str | None = None,
 ) -> str:
     input_payload = {
         "target_language": target_language,
@@ -64,12 +65,17 @@ def build_prompt(
     if context:
         input_payload["context"] = context
     payload = json.dumps(input_payload, ensure_ascii=False)
+
+    # Merge static hint (from map) and dynamic hint (from args)
+    static_hint = _language_hint(target_language)
+    combined_hint = f"{static_hint}\n{language_hint or ''}".strip()
+
     try:
         return render_prompt(
             "translate_json",
             {
                 "payload": payload,
-                "language_hint": _language_hint(target_language),
+                "language_hint": combined_hint,
                 "target_language_label": _language_label(target_language),
                 "target_language_code": target_language,
             },

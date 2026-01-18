@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import StreamingResponse
@@ -22,6 +23,8 @@ from backend.services.llm_errors import (
     is_connection_refused,
 )
 from backend.services.translate_llm import translate_blocks_async as translate_pptx_blocks_async
+
+LOGGER = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/pptx")
 
@@ -162,34 +165,63 @@ async def pptx_translate_stream(
         async def progress_cb(progress_data):
             await queue.put({"event": "progress", "data": json.dumps(progress_data)})
 
-        task = asyncio.create_task(
-            translate_pptx_blocks_async(
-                _prepare_blocks_for_correction(blocks_data, source_language)
-                if mode == "correction"
-                else blocks_data,
-                target_language,
-                source_language=resolved_source_language,
-                use_tm=use_tm,
-                provider=provider,
-                model=model,
-                api_key=api_key,
-                base_url=base_url,
-                tone=tone,
-                vision_context=vision_context,
-                smart_layout=smart_layout,
-                param_overrides=param_overrides,
-                on_progress=progress_cb,
+        try:
+            # Send initial progress event to switch UI status from
+            # "Preparing" to "Translating" immediately
+            await queue.put(
+                {
+                    "event": "progress",
+                    "data": json.dumps(
+                        {
+                            "chunk_index": 0,
+                            "completed_indices": [],
+                            "chunk_size": 0,
+                            "total_pending": len(blocks_data),
+                            "timestamp": 0,
+                        }
+                    ),
+                }
             )
-        )
 
-        while not task.done() or not queue.empty():
-            try:
-                event = await asyncio.wait_for(queue.get(), timeout=0.1)
-                yield f"event: {event['event']}\ndata: {event['data']}\n\n"
-            except asyncio.TimeoutError:
-                continue
+            task = asyncio.create_task(
+                translate_pptx_blocks_async(
+                    _prepare_blocks_for_correction(blocks_data, source_language)
+                    if mode == "correction"
+                    else blocks_data,
+                    target_language,
+                    source_language=resolved_source_language,
+                    use_tm=use_tm,
+                    provider=provider,
+                    model=model,
+                    api_key=api_key,
+                    base_url=base_url,
+                    tone=tone,
+                    vision_context=vision_context,
+                    smart_layout=smart_layout,
+                    param_overrides=param_overrides,
+                    on_progress=progress_cb,
+                )
+            )
 
-        result = await task
-        yield f"event: complete\ndata: {json.dumps(result)}\n\n"
+            while True:
+                get_queue_task = asyncio.create_task(queue.get())
+                done, pending = await asyncio.wait(
+                    [get_queue_task, task], return_when=asyncio.FIRST_COMPLETED
+                )
+
+                if get_queue_task in done:
+                    event = get_queue_task.result()
+                    yield f"event: {event['event']}\ndata: {event['data']}\n\n"
+                else:
+                    get_queue_task.cancel()
+
+                if task in done:
+                    result = await task
+                    yield f"event: complete\ndata: {json.dumps(result)}\n\n"
+                    break
+
+        except Exception as exc:
+            LOGGER.exception("Translation stream error")
+            yield f"event: error\ndata: {json.dumps({'detail': str(exc)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

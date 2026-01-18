@@ -25,11 +25,32 @@ function App() {
   const [secondaryLocked, setSecondaryLocked] = useState(false);
   const [targetLocked, setTargetLocked] = useState(false);
 
-  // Correction Settings
-  const [fillColor, setFillColor] = useState("#FFF16A");
-  const [textColor, setTextColor] = useState("#D90000");
-  const [lineColor, setLineColor] = useState("#7B2CB9");
-  const [lineDash, setLineDash] = useState("dash");
+  // Correction Settings (with localStorage persistence)
+  // Correction Settings (with localStorage persistence)
+  const [fillColor, setFillColor] = useState(() => {
+    const v = localStorage.getItem("correction_fillColor");
+    return (v && v !== "undefined" && v !== "null") ? v : "#FFF16A";
+  });
+  const [textColor, setTextColor] = useState(() => {
+    const v = localStorage.getItem("correction_textColor");
+    return (v && v !== "undefined" && v !== "null") ? v : "#D90000";
+  });
+  const [lineColor, setLineColor] = useState(() => {
+    const v = localStorage.getItem("correction_lineColor");
+    return (v && v !== "undefined" && v !== "null") ? v : "#7B2CB9";
+  });
+  const [lineDash, setLineDash] = useState(() => {
+    const v = localStorage.getItem("correction_lineDash");
+    return (v && v !== "undefined" && v !== "null") ? v : "dash";
+  });
+
+  // Auto-save correction settings whenever they change
+  useEffect(() => {
+    if (fillColor) localStorage.setItem("correction_fillColor", fillColor);
+    if (textColor) localStorage.setItem("correction_textColor", textColor);
+    if (lineColor) localStorage.setItem("correction_lineColor", lineColor);
+    if (lineDash) localStorage.setItem("correction_lineDash", lineDash);
+  }, [fillColor, textColor, lineColor, lineDash]);
 
   // Advanced AI Settings
   const [llmTone, setLlmTone] = useState("professional"); // professional, concise, humorous, pm, creative
@@ -212,7 +233,12 @@ function App() {
         llmFastMode={llm.llmFastMode} setLlmFastMode={llm.setLlmFastMode}
         llmModels={llm.llmModels} llmStatus={llm.llmStatus}
         onDetect={llm.handleDetectModels} onSave={llm.handleSaveLlm}
-        onSaveCorrection={() => { ui.setStatus("已儲存設定"); llm.setLlmOpen(false); }}
+        onSaveCorrection={() => {
+          // Triggered when "Check" button is clicked in Correction tab
+          // Settings are already auto-saved via useEffect above
+          ui.setStatus("已儲存設定");
+          llm.setLlmOpen(false);
+        }}
         defaultBaseUrl={llm.defaultBaseUrl}
         fillColor={fillColor} setFillColor={setFillColor}
         textColor={textColor} setTextColor={setTextColor}
