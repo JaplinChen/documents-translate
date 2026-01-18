@@ -1,11 +1,12 @@
 import asyncio
 import json
 
-from backend.api.pptx import pptx_translate
+from backend.api.pptx_translate import pptx_translate
+from backend.config import settings
 
 
 def test_pptx_translate_returns_llm_mode_warning(monkeypatch):
-    monkeypatch.setenv("TRANSLATE_LLM_MODE", "mock")
+    monkeypatch.setattr(settings, "translate_llm_mode", "mock")
     blocks = [
         {
             "slide_index": 0,

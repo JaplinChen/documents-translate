@@ -47,5 +47,3 @@ agent:
       - unzip
       - ssh
       - scp
-
-

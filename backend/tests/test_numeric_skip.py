@@ -1,13 +1,15 @@
 import re
 
+
 def _is_numeric_only(text: str) -> bool:
     """Check if the text consists only of numbers, punctuation, or whitespace."""
     if not text.strip():
         return True
     # If it contains any letter (English, CJK), it's not purely numeric/symbolic
-    if re.search(r'[a-zA-Z\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]', text):
+    if re.search(r"[a-zA-Z\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", text):
         return False
     return True
+
 
 test_cases = [
     ("123", True),

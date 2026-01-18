@@ -25,7 +25,7 @@ if command -v ollama &> /dev/null; then
     # Kill existing Ollama processes
     pkill -f "ollama serve" 2>/dev/null || true
     sleep 1
-    
+
     # Start Ollama with 0.0.0.0 binding (allows Docker access)
     OLLAMA_HOST=0.0.0.0 ollama serve &
     OLLAMA_PID=$!

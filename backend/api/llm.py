@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Form, HTTPException
 
+from backend.services.llm_errors import (
+    build_connection_refused_message,
+    is_connection_refused,
+)
 from backend.services.llm_models import (
     list_gemini_models,
     list_ollama_models,
     list_openai_models,
-)
-from backend.services.llm_errors import (
-    build_connection_refused_message,
-    is_connection_refused,
 )
 
 router = APIRouter(prefix="/api/llm")

@@ -3,9 +3,8 @@
 This module contains language matching, mismatch detection,
 retry context building, and translation result processing.
 """
-from __future__ import annotations
 
-import os
+from __future__ import annotations
 
 from backend.services.language_detect import detect_language
 from backend.services.llm_glossary import apply_glossary
@@ -17,11 +16,11 @@ from backend.services.translation_memory import save_tm
 
 def matches_target_language(text: str, target_language: str) -> bool:
     """Check if text matches the target language.
-    
+
     Args:
         text: Text to check
         target_language: Expected language code
-        
+
     Returns:
         True if text matches target language or cannot be determined
     """
@@ -43,16 +42,16 @@ def matches_target_language(text: str, target_language: str) -> bool:
 
 def has_language_mismatch(texts: list[str], target_language: str) -> bool:
     """Check if translated texts have language mismatch.
-    
+
     Returns False (no mismatch) if:
     - No target language specified
     - Target language is 'auto'
     - Majority of texts match the target language
-    
+
     Args:
         texts: List of translated texts
         target_language: Expected language code
-        
+
     Returns:
         True if majority of texts don't match target language
     """
@@ -60,33 +59,32 @@ def has_language_mismatch(texts: list[str], target_language: str) -> bool:
         return False
     if not texts:
         return False
-    
+
     # Early termination optimization: stop checking once we know the result
     total = len(texts)
     threshold = total * 0.5
     matching_count = 0
-    
+
     for text in texts:
         if matches_target_language(text, target_language):
             matching_count += 1
             # Early exit if we've already passed threshold
             if matching_count >= threshold:
                 return False
-    
-    return matching_count < threshold
 
+    return matching_count < threshold
 
 
 def build_language_retry_context(
     context: dict | None, texts: list[str], target_language: str
 ) -> dict:
     """Build context for language mismatch retry.
-    
+
     Args:
         context: Original context dictionary
         texts: Translated texts with wrong language
         target_language: Expected language code
-        
+
     Returns:
         Updated context with language retry instructions
     """
@@ -122,10 +120,10 @@ def apply_translation_results(
     use_tm: bool,
 ) -> None:
     """Apply translation results to output list.
-    
+
     This function handles placeholder restoration, glossary application,
     caching, and translation memory saving.
-    
+
     Args:
         chunk: List of (original_index, block) tuples
         placeholder_maps: List of placeholder mappings per block
@@ -136,21 +134,23 @@ def apply_translation_results(
         target_language: Target language code
         use_tm: Whether to save to translation memory
     """
+    from backend.config import settings
+
     for (original, mapping), translated in zip(
-        zip(chunk, placeholder_maps), result["blocks"]
+        zip(chunk, placeholder_maps, strict=True), result["blocks"], strict=True
     ):
         if "client_id" not in translated and original[1].get("client_id"):
             translated["client_id"] = original[1].get("client_id")
-        
+
         translated_text = translated.get("translated_text", "")
         translated_text = restore_placeholders(translated_text, mapping)
-        
+
         if glossary:
             translated_text = apply_glossary(translated_text, glossary)
-        
+
         translated_texts[original[0]] = translated_text
         key = cache_key(original[1])
-        
+
         if (
             use_tm
             and not has_placeholder(translated_text)
@@ -158,7 +158,7 @@ def apply_translation_results(
         ):
             cache[key] = translated_text
             save_tm(
-                source_lang=os.getenv("SOURCE_LANGUAGE", "auto"),
+                source_lang=settings.source_language,
                 target_lang=target_language,
                 text=key,
                 translated=translated_text,

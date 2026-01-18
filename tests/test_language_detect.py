@@ -28,4 +28,3 @@ def test_detect_language_vietnamese_needs_multiple_diacritics() -> None:
     # Xin chào 有 2 個越南語特徵（à, o hook）
     result = detect_language("Xin chào Việt Nam")
     assert result == "vi", f"Expected 'vi', got: {result}"
-

@@ -10,7 +10,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        with open(args.blocks_in, "r", encoding="utf-8") as handle:
+        with open(args.blocks_in, encoding="utf-8") as handle:
             blocks = json.load(handle)
     except OSError as exc:
         print(f"Failed to read blocks file: {exc}", file=sys.stderr)

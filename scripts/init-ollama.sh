@@ -58,10 +58,10 @@ else
     echo -e "${YELLOW}[3/3] 下載模型 ${OLLAMA_MODEL}...${NC}"
     echo -e "${BLUE}  這可能需要幾分鐘，取決於您的網路速度${NC}"
     echo ""
-    
+
     # 使用 docker exec 在容器內執行 ollama pull
     docker exec ppt-translate-ollama ollama pull "${OLLAMA_MODEL}"
-    
+
     if [ $? -eq 0 ]; then
         echo ""
         echo -e "${GREEN}✓ 模型 ${OLLAMA_MODEL} 下載完成！${NC}"

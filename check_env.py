@@ -1,8 +1,10 @@
-import sys
-import pkg_resources
 import os
+import sys
 
-def check_requirements(requirements_path='requirements.txt'):
+import pkg_resources
+
+
+def check_requirements(requirements_path="requirements.txt"):
     """
     Checks if packages in requirements.txt are installed.
     """
@@ -11,18 +13,25 @@ def check_requirements(requirements_path='requirements.txt'):
         sys.exit(1)
 
     print(f"Checking requirements from: {requirements_path}")
-    
-    with open(requirements_path, 'r') as f:
+
+    with open(requirements_path) as f:
         # Parse requirements, ignoring comments and empty lines
         requirements = []
         for line in f:
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
             # Handle version specifiers typically found in requirements.txt
             # e.g., "fastapi==0.68.0" -> "fastapi"
             # Also handle >=, <=, etc.
-            pkg_name = line.split('==')[0].split('>=')[0].split('<=')[0].split('>')[0].split('<')[0].strip()
+            pkg_name = (
+                line.split("==")[0]
+                .split(">=")[0]
+                .split("<=")[0]
+                .split(">")[0]
+                .split("<")[0]
+                .strip()
+            )
             requirements.append(pkg_name)
 
     missing = []
@@ -34,7 +43,7 @@ def check_requirements(requirements_path='requirements.txt'):
         if req_lower not in installed:
             # Special mapping for frequent mismatches if needed (e.g. PIL -> Pillow)
             # But usually pip freeze > requirements.txt handles this.
-            # python-docx is installed as python-docx but imported as docx, 
+            # python-docx is installed as python-docx but imported as docx,
             # however pkg_resources checks distribution names, so python-docx is correct.
             missing.append(req)
 
@@ -43,8 +52,9 @@ def check_requirements(requirements_path='requirements.txt'):
         print("Please run:")
         print(f"pip install -r {requirements_path}")
         sys.exit(1)
-    
+
     print("All requirements satisfied.")
+
 
 if __name__ == "__main__":
     check_requirements()

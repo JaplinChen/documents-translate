@@ -133,9 +133,7 @@ def apply_shape_highlight(
         pass
 
 
-def set_corrected_text(
-    text_frame: TextFrame, lines: list[str], translated_color: RGBColor
-) -> bool:
+def set_corrected_text(text_frame: TextFrame, lines: list[str], translated_color: RGBColor) -> bool:
     font_spec = capture_font_spec(text_frame)
     try:
         text_frame.clear()

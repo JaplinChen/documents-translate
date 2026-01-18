@@ -7,7 +7,7 @@ def load_glossary(path: str | None) -> list[tuple[str, str]]:
     if not path:
         return []
     entries: list[tuple[str, str]] = []
-    with open(path, "r", encoding="utf-8") as handle:
+    with open(path, encoding="utf-8") as handle:
         reader = csv.reader(handle)
         for row in reader:
             if len(row) < 2:

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
-
 
 DB_PATH = Path(__file__).resolve().parents[2] / "data" / "translation_memory.db"
 
@@ -46,7 +45,6 @@ def _ensure_db() -> None:
     _DB_INITIALIZED = True
 
 
-
 def _hash_text(source_lang: str, target_lang: str, text: str) -> str:
     payload = f"{source_lang}|{target_lang}|{text}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -75,9 +73,7 @@ def save_tm(source_lang: str, target_lang: str, text: str, translated: str) -> N
         conn.commit()
 
 
-def apply_glossary(
-    source_lang: str, target_lang: str, text: str
-) -> str:
+def apply_glossary(source_lang: str, target_lang: str, text: str) -> str:
     if not text:
         return text
     _ensure_db()
@@ -152,12 +148,13 @@ def seed_glossary(entries: Iterable[tuple[str, str, str, str, int | None]]) -> N
     with sqlite3.connect(DB_PATH) as conn:
         for source_lang, target_lang, source_text, target_text, priority in entries:
             conn.execute(
-                "DELETE FROM glossary WHERE source_lang = ? AND target_lang = ? AND source_text = ?",
+                "DELETE FROM glossary WHERE source_lang = ? AND target_lang = ? "
+                "AND source_text = ?",
                 (source_lang, target_lang, source_text),
             )
             conn.execute(
-                "INSERT INTO glossary (source_lang, target_lang, source_text, target_text, priority) "
-                "VALUES (?, ?, ?, ?, COALESCE(?, 0))",
+                "INSERT INTO glossary (source_lang, target_lang, source_text, "
+                "target_text, priority) VALUES (?, ?, ?, ?, COALESCE(?, 0))",
                 (source_lang, target_lang, source_text, target_text, priority),
             )
         conn.commit()
@@ -169,8 +166,8 @@ def seed_tm(entries: Iterable[tuple[str, str, str, str]]) -> None:
         for source_lang, target_lang, source_text, target_text in entries:
             key = _hash_text(source_lang, target_lang, source_text)
             conn.execute(
-                "INSERT OR REPLACE INTO tm (source_lang, target_lang, source_text, target_text, hash) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO tm (source_lang, target_lang, source_text, "
+                "target_text, hash) VALUES (?, ?, ?, ?, ?)",
                 (source_lang, target_lang, source_text, target_text, key),
             )
         conn.commit()
@@ -251,7 +248,8 @@ def batch_upsert_glossary(entries: list[dict]) -> None:
     with sqlite3.connect(DB_PATH) as conn:
         for entry in entries:
             conn.execute(
-                "DELETE FROM glossary WHERE source_lang = ? AND target_lang = ? AND source_text = ?",
+                "DELETE FROM glossary WHERE source_lang = ? AND target_lang = ? "
+                "AND source_text = ?",
                 (
                     entry.get("source_lang"),
                     entry.get("target_lang"),
@@ -259,8 +257,8 @@ def batch_upsert_glossary(entries: list[dict]) -> None:
                 ),
             )
             conn.execute(
-                "INSERT INTO glossary (source_lang, target_lang, source_text, target_text, priority) "
-                "VALUES (?, ?, ?, ?, COALESCE(?, 0))",
+                "INSERT INTO glossary (source_lang, target_lang, source_text, "
+                "target_text, priority) VALUES (?, ?, ?, ?, COALESCE(?, 0))",
                 (
                     entry.get("source_lang"),
                     entry.get("target_lang"),

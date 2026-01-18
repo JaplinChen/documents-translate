@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, UploadFile, Response
+from fastapi import APIRouter, File, Response, UploadFile
 from pydantic import BaseModel
 
 from backend.services.translation_memory import (
@@ -74,6 +74,7 @@ async def tm_glossary_upsert(entry: GlossaryEntry) -> dict:
 @router.post("/glossary/batch")
 async def tm_glossary_batch(entries: list[GlossaryEntry]) -> dict:
     from backend.services.translation_memory import batch_upsert_glossary
+
     batch_upsert_glossary([e.model_dump() for e in entries])
     return {"status": "ok", "count": len(entries)}
 
@@ -81,6 +82,7 @@ async def tm_glossary_batch(entries: list[GlossaryEntry]) -> dict:
 @router.delete("/glossary/clear")
 async def tm_glossary_clear() -> dict:
     from backend.services.translation_memory import clear_glossary
+
     deleted = clear_glossary()
     return {"deleted": deleted}
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from io import BytesIO
-from typing import Iterable
 
 from docx import Document
 from fastapi import APIRouter, File, HTTPException, UploadFile

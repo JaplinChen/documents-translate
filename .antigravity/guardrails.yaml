@@ -10,14 +10,14 @@ permissions:
     interact_mode: silent
     # 允許自動執行指令
     auto_execute: true
-    
+
     # 這些指令永遠被禁止 (Agent 嘗試執行時會直接報錯)
     blocked_commands:
       - "rm -rf /"
       - "mkfs"
       - "dd"
       - ":(){ :|:& };:" # Fork bombs
-    
+
     # 這些指令雖然允許，但必須強制人類點擊確認
     require_confirmation_regex:
       - "^sudo"
@@ -29,7 +29,7 @@ permissions:
   filesystem:
     # 允許自動寫入
     auto_apply: true
-    
+
     # 禁止 Agent 修改或讀取的敏感文件
     protected_patterns:
       - ".env*"

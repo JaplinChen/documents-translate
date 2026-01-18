@@ -35,11 +35,7 @@ def add_overflow_textboxes(
         text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
         text_frame.clear()
         for line_index, line in enumerate(chunk.split("\n")):
-            paragraph = (
-                text_frame.paragraphs[0]
-                if line_index == 0
-                else text_frame.add_paragraph()
-            )
+            paragraph = text_frame.paragraphs[0] if line_index == 0 else text_frame.add_paragraph()
             paragraph.text = line
             if paragraph.runs:
                 apply_font_spec(paragraph.runs[0], font_spec or {}, translated_color, scale=0.9)

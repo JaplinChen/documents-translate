@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { API_BASE } from "../constants";
 
 export function usePptxProcessor({
@@ -29,7 +29,6 @@ export function usePptxProcessor({
         const errorText = await response.text();
         if (!errorText) return fallback;
 
-        // 如果是 HTML (通常是 502/504 Bad Gateway)
         if (errorText.includes("<html>")) {
             const titleMatch = errorText.match(/<title>(.*?)<\/title>/);
             if (titleMatch && titleMatch[1]) return `伺服器連線異常: ${titleMatch[1]}`;
@@ -45,9 +44,6 @@ export function usePptxProcessor({
             return errorText;
         }
     };
-
-    const buildBlockKey = (block) =>
-        [block.slide_index ?? "", block.shape_id ?? "", block.block_type ?? ""].join("|");
 
     const buildBlockUid = (block, fallbackIndex) =>
         block._uid ||
@@ -89,7 +85,8 @@ export function usePptxProcessor({
                     _uid: uid,
                     client_id: block.client_id || uid,
                     selected: block.selected !== false,
-                    output_mode: block.output_mode || (translatedText ? "translated" : "source")
+                    output_mode: block.output_mode || (translatedText ? "translated" : "source"),
+                    isTranslating: false
                 };
             });
             setBlocks(nextBlocks);
@@ -112,66 +109,97 @@ export function usePptxProcessor({
             return;
         }
         setBusy(true);
-        const totalCount = blocks.length;
-        const chunkSize = llmProvider === "ollama" ? (llmFastMode ? 3 : 6) : 20;
         setProgress(0);
-        setStatus(`翻譯中...（0/${totalCount}）`);
+        setStatus(`準備翻譯中...`);
+
+        // Mark all blocks as translating
+        setBlocks(prev => prev.map(b => ({ ...b, isTranslating: true })));
+
         try {
-            let translatedCount = 0;
-            let updatedBlocks = blocks.map(b => ({ ...b, isTranslating: false }));
+            const formData = new FormData();
+            formData.append("blocks", JSON.stringify(blocks));
+            formData.append("source_language", sourceLang || "auto");
+            formData.append("secondary_language", secondaryLang || "auto");
+            formData.append("target_language", targetLang);
+            formData.append("mode", mode);
+            formData.append("use_tm", useTm ? "true" : "false");
+            formData.append("provider", llmProvider);
+            if (llmModel) formData.append("model", llmModel);
+            if (llmApiKey) formData.append("api_key", llmApiKey);
+            if (llmBaseUrl) formData.append("base_url", llmBaseUrl);
+            formData.append("ollama_fast_mode", llmFastMode ? "true" : "false");
 
-            for (let start = 0; start < blocks.length; start += chunkSize) {
-                const chunkIndices = Array.from(
-                    { length: Math.min(chunkSize, blocks.length - start) },
-                    (_, idx) => start + idx
-                );
-                chunkIndices.forEach(idx => { updatedBlocks[idx].isTranslating = true; });
-                setBlocks([...updatedBlocks]);
+            const response = await fetch(`${API_BASE}/api/pptx/translate-stream`, {
+                method: "POST",
+                body: formData
+            });
 
-                const chunkBlocks = chunkIndices.map(idx => updatedBlocks[idx]);
-                const formData = new FormData();
-                formData.append("blocks", JSON.stringify(chunkBlocks));
-                formData.append("source_language", sourceLang || "auto");
-                formData.append("secondary_language", secondaryLang || "auto");
-                formData.append("target_language", targetLang);
-                formData.append("mode", mode);
-                formData.append("use_tm", useTm ? "true" : "false");
-                formData.append("provider", llmProvider);
-                if (llmModel) formData.append("model", llmModel);
-                if (llmApiKey) formData.append("api_key", llmApiKey);
-                if (llmBaseUrl) formData.append("base_url", llmBaseUrl);
-
-                const response = await fetch(`${API_BASE}/api/pptx/translate`, {
-                    method: "POST",
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error(await readErrorDetail(response, "翻譯失敗"));
-                const data = await response.json();
-                const translated = data.blocks || [];
-
-                translated.forEach((matched, localIdx) => {
-                    const blockIdx = chunkIndices[localIdx];
-                    const block = updatedBlocks[blockIdx];
-                    const translatedText = matched.translated_text || block.translated_text || "";
-                    updatedBlocks[blockIdx] = {
-                        ...block,
-                        translated_text: translatedText,
-                        isTranslating: false,
-                        updatedAt: new Date().toLocaleTimeString("zh-TW", { hour12: false })
-                    };
-                });
-
-                translatedCount += chunkBlocks.length;
-                setProgress(Math.round((translatedCount / totalCount) * 100));
-                setBlocks([...updatedBlocks]);
-                setStatus(`翻譯中...（${translatedCount}/${totalCount}）`);
+            if (!response.ok) {
+                const detail = await readErrorDetail(response, "連線失敗");
+                throw new Error(detail);
             }
-            setProgress(100);
-            setStatus("翻譯完成");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let completedCount = 0;
+            let currentBlocks = [...blocks];
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n\n");
+                buffer = lines.pop(); // Keep last incomplete chunk
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+
+                    const eventMatch = line.match(/^event: (.*)$/m);
+                    const dataMatch = line.match(/^data: (.*)$/m);
+
+                    if (!eventMatch || !dataMatch) continue;
+
+                    const eventType = eventMatch[1];
+                    const eventData = JSON.parse(dataMatch[1]);
+
+                    if (eventType === "progress") {
+                        const { completed_indices } = eventData;
+                        completedCount += completed_indices.length;
+
+                        // Update blocks that were in this particular chunk
+                        completed_indices.forEach(idx => {
+                            if (currentBlocks[idx]) {
+                                currentBlocks[idx] = { ...currentBlocks[idx], isTranslating: false };
+                            }
+                        });
+
+                        const pct = Math.round((completedCount / blocks.length) * 100);
+                        setProgress(pct);
+                        setStatus(`翻譯中... (${completedCount}/${blocks.length})`);
+                        // We don't update ALL blocks every single event to avoid jitter,
+                        // but for small progress it's fine.
+                    } else if (eventType === "complete") {
+                        const finalResult = eventData.blocks || [];
+                        const nextBlocks = currentBlocks.map((b, i) => ({
+                            ...b,
+                            translated_text: finalResult[i]?.translated_text || b.translated_text,
+                            isTranslating: false,
+                            updatedAt: finalResult[i]?.translated_text ? new Date().toLocaleTimeString("zh-TW", { hour12: false }) : b.updatedAt
+                        }));
+                        setBlocks(nextBlocks);
+                        setProgress(100);
+                        setStatus("翻譯完成");
+                        setBusy(false);
+                        return;
+                    } else if (eventType === "error") {
+                        throw new Error(eventData.detail || "串流發生錯誤");
+                    }
+                }
+            }
         } catch (error) {
-            setStatus(`翻譯失敗：${error.message}`);
-        } finally {
+            setStatus(`翻譯發生錯誤：${error.message}`);
             setBusy(false);
         }
     };

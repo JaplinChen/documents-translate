@@ -1,11 +1,10 @@
-
+import glob
 import os
 import shutil
-import glob
 
 def clean_workspace():
     # 1. Python Cache
-    for root, dirs, files in os.walk("."):
+    for root, dirs, _files in os.walk("."):
         if "__pycache__" in dirs:
             shutil.rmtree(os.path.join(root, "__pycache__"))
             print(f"Deleted: {os.path.join(root, '__pycache__')}")
@@ -21,9 +20,9 @@ def clean_workspace():
         "ai-router-package.zip",
         "backend/build",
         "backend/dist",
-        "*.spec"
+        "*.spec",
     ]
-    
+
     for path in artifacts:
         resolved = glob.glob(path, recursive=True)
         for p in resolved:
@@ -40,8 +39,9 @@ def clean_workspace():
     for log in glob.glob("**/*.log", recursive=True):
         os.remove(log)
         print(f"Deleted: {log}")
-        
+
     print("Cleanup complete.")
+
 
 if __name__ == "__main__":
     clean_workspace()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 
 def build_contract(
@@ -64,11 +64,7 @@ def coerce_contract(result: dict, blocks: list[dict], target_language: str) -> d
         translated_texts = []
         for i, item in enumerate(candidate_list):
             # 優先嘗試從 LLM 響應獲取譯文，若無則嘗試原始文字
-            text = (
-                item.get("translated_text")
-                or item.get("translation")
-                or item.get("text")
-            )
+            text = item.get("translated_text") or item.get("translation") or item.get("text")
             if not text and i < len(blocks):
                 text = blocks[i].get("source_text", "")
             translated_texts.append(text or "")

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import List, Dict
 
 from backend.services.llm_clients import (
     GeminiTranslator,
@@ -12,6 +11,7 @@ from backend.services.llm_clients import (
     OpenAITranslator,
     TranslationConfig,
 )
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -22,9 +22,9 @@ def _parse_json_array(content: str) -> list:
     """
     if not content or not content.strip():
         return []
-    
+
     text = content.strip()
-    
+
     # Try direct parse first
     try:
         result = json.loads(text)
@@ -33,8 +33,8 @@ def _parse_json_array(content: str) -> list:
         return []
     except json.JSONDecodeError:
         pass
-    
-    # Try to find JSON array pattern [...] 
+
+    # Try to find JSON array pattern [...]
     start = text.find("[")
     end = text.rfind("]")
     if start != -1 and end != -1 and end > start:
@@ -44,23 +44,24 @@ def _parse_json_array(content: str) -> list:
                 return result
         except json.JSONDecodeError:
             pass
-    
+
     return []
 
+
 def extract_glossary_terms(
-    blocks: List[Dict],
+    blocks: list[dict],
     target_language: str,
     provider: str | None = None,
     model: str | None = None,
     api_key: str | None = None,
     base_url: str | None = None,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Extract key terminology from a list of PPTX blocks using LLM.
     Returns a list of dicts: [{"source": "...", "target": "...", "reason": "..."}]
     """
     mode = os.getenv("TRANSLATE_LLM_MODE", "real").lower()
-    
+
     if mode == "mock":
         client = MockTranslator()
     else:
@@ -75,7 +76,8 @@ def extract_glossary_terms(
         elif resolved_provider == "gemini":
             client = GeminiTranslator(
                 api_key=api_key or os.getenv("GEMINI_API_KEY", ""),
-                base_url=base_url or os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta"),
+                base_url=base_url
+                or os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta"),
                 model=model or os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
             )
         elif resolved_provider == "ollama":
@@ -88,17 +90,19 @@ def extract_glossary_terms(
 
     # Consolidate all text for extraction
     # Support both 'original_text' (frontend) and 'source_text' (possible legacy)
-    full_text = "\n".join([
-        b.get("original_text") or b.get("source_text", "") 
-        for b in blocks 
-        if b.get("original_text") or b.get("source_text")
-    ])
+    full_text = "\n".join(
+        [
+            b.get("original_text") or b.get("source_text", "")
+            for b in blocks
+            if b.get("original_text") or b.get("source_text")
+        ]
+    )
     if not full_text.strip():
         LOGGER.warning("No text content found in blocks for glossary extraction")
         return []
 
     # Limit text size to avoid token limit
-    text_sample = full_text[:10000] 
+    text_sample = full_text[:10000]
 
     prompt = f"""請分析以下簡報內容，提取出重要的跨頁面術語、專有名詞或縮寫。
 目標語言：{target_language}
@@ -131,12 +135,16 @@ def extract_glossary_terms(
     except ConnectionError as e:
         # Connection errors should be raised to inform the user
         LOGGER.error(f"Connection error extracting glossary: {e}")
-        raise RuntimeError(str(e))
+        raise RuntimeError(str(e)) from e
     except Exception as e:
         error_msg = str(e)
         LOGGER.error(f"Error extracting glossary: {error_msg}")
         # If it's a connection-related error, raise it
-        if "連線" in error_msg or "connect" in error_msg.lower() or "connection" in error_msg.lower():
-            raise RuntimeError(error_msg)
+        if (
+            "連線" in error_msg
+            or "connect" in error_msg.lower()
+            or "connection" in error_msg.lower()
+        ):
+            raise RuntimeError(error_msg) from e
         # For other errors (like JSON parsing), return empty list
         return []

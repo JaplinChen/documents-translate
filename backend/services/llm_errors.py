@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 
 def _iter_errors(error: BaseException) -> Iterable[BaseException]:

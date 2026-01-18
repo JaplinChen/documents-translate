@@ -14,15 +14,13 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        with open(args.blocks_path, "r", encoding="utf-8") as handle:
+        with open(args.blocks_path, encoding="utf-8") as handle:
             blocks = json.load(handle)
     except OSError as exc:
         print(f"Failed to read blocks file: {exc}", file=sys.stderr)
         return 1
 
-    apply_chinese_corrections(
-        args.pptx_in, args.pptx_out, blocks, line_dash=args.line_dash
-    )
+    apply_chinese_corrections(args.pptx_in, args.pptx_out, blocks, line_dash=args.line_dash)
     return 0
 
 

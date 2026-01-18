@@ -3,6 +3,7 @@
 This module contains language-related constants, provider defaults,
 and utility functions for translation configuration.
 """
+
 from __future__ import annotations
 
 # Language code to label mapping
@@ -34,36 +35,12 @@ LANGUAGE_HINTS = {
 
 # Few-shot examples to force correct language output
 LANGUAGE_EXAMPLES = {
-    "vi": (
-        "<<<BLOCK:0>>>\n"
-        "Giải pháp doanh nghiệp\n"
-        "<<<END>>>"
-    ),
-    "zh-TW": (
-        "<<<BLOCK:0>>>\n"
-        "企業解決方案\n"
-        "<<<END>>>"
-    ),
-    "zh-CN": (
-        "<<<BLOCK:0>>>\n"
-        "企业解决方案\n"
-        "<<<END>>>"
-    ),
-    "en": (
-        "<<<BLOCK:0>>>\n"
-        "Enterprise Solution\n"
-        "<<<END>>>"
-    ),
-    "ja": (
-        "<<<BLOCK:0>>>\n"
-        "企業ソリューション\n"
-        "<<<END>>>"
-    ),
-    "ko": (
-        "<<<BLOCK:0>>>\n"
-        "기업 솔루션\n"
-        "<<<END>>>"
-    ),
+    "vi": ("<<<BLOCK:0>>>\nGiải pháp doanh nghiệp\n<<<END>>>"),
+    "zh-TW": ("<<<BLOCK:0>>>\n企業解決方案\n<<<END>>>"),
+    "zh-CN": ("<<<BLOCK:0>>>\n企业解决方案\n<<<END>>>"),
+    "en": ("<<<BLOCK:0>>>\nEnterprise Solution\n<<<END>>>"),
+    "ja": ("<<<BLOCK:0>>>\n企業ソリューション\n<<<END>>>"),
+    "ko": ("<<<BLOCK:0>>>\n기업 솔루션\n<<<END>>>"),
 }
 
 # Provider-specific default configurations

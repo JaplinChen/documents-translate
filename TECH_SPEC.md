@@ -1,197 +1,217 @@
-# PPT_Translate Technical Specification
-
-> Version: 1.0  
-> Generated: 2026-01-16  
-> Project Type: Enterprise PPTX Translation & Proofreading Console
-
----
+# PPTX Translate - Technical Specification Document
 
 ## 1. Core Architecture
 
-### 1.1 System Overview
-
-```mermaid
-flowchart TB
-    subgraph Frontend["Frontend (React/Vite)"]
-        UI[App.jsx - 1900+ LOC]
-        SM[SettingsModal]
-        MM[ManageModal]
-    end
-    
-    subgraph Backend["Backend (FastAPI)"]
-        API[API Layer]
-        SVC[Services Layer]
-        TM[Translation Memory]
-    end
-    
-    subgraph LLM["LLM Providers"]
-        OL[Ollama]
-        GM[Gemini]
-        OA[OpenAI]
-    end
-    
-    UI --> API
-    API --> SVC
-    SVC --> TM
-    SVC --> LLM
-```
-
-### 1.2 Technology Stack
+### 1.1 Tech Stack
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| **Frontend** | React + Vite | React 18, Vite 5 |
-| **Backend** | Python + FastAPI | Python 3.13, FastAPI 0.109+ |
-| **LLM** | Ollama / Gemini / OpenAI | Multi-provider |
-| **File Processing** | python-pptx | PPTX manipulation |
-| **Containerization** | Docker + Docker Compose | Multi-stage build |
-| **Language Detection** | langdetect | Custom CJK/Vietnamese detection |
+| **Backend** | Python / FastAPI | 3.13+ |
+| **Frontend** | React / Vite | 18.3.1 / 7.3.1 |
+| **Styling** | TailwindCSS | 3.4.17 |
+| **Data Validation** | Pydantic | 2.x |
+| **HTTP Client** | httpx | async |
+| **Database** | SQLite | embedded |
+| **Container** | Docker / docker-compose | - |
 
-### 1.3 Directory Structure
+### 1.2 Architecture Pattern
 
 ```
-PPT_Translate/
-├── backend/
-│   ├── api/                    # FastAPI routers
-│   │   ├── pptx.py            # PPTX endpoints
-│   │   ├── llm.py             # LLM model endpoints
-│   │   ├── tm.py              # Translation Memory endpoints
-│   │   ├── docx.py            # DOCX endpoints
-│   │   └── prompts.py         # Prompt management
-│   ├── services/              # Business logic
-│   │   ├── translate_llm.py   # Core translation engine
-│   │   ├── llm_clients.py     # LLM provider adapters
-│   │   ├── pptx_extract.py    # PPTX text extraction
-│   │   ├── pptx_apply_core.py # PPTX modification
-│   │   ├── language_detect.py # Language detection
-│   │   └── translation_memory.py # TM storage
-│   ├── prompts/               # LLM prompt templates
-│   └── main.py                # FastAPI app entry
-├── frontend/
-│   └── src/
-│       ├── App.jsx            # Main SPA component
-│       ├── components/        # Reusable components
-│       └── styles.css         # Global styles
-├── docs/                      # Contract files
-├── data/                      # Runtime data storage
-├── Dockerfile.backend         # Backend container
-├── Dockerfile.frontend        # Frontend container
-└── docker-compose.yml         # Orchestration
+┌─────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (Vite + React)                  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐            │
+│  │ Sidebar  │ │ Editor   │ │ Settings │ │ Manage   │            │
+│  │ (Upload) │ │ (Blocks) │ │ (LLM)    │ │ (TM/GL)  │            │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘            │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ REST API / SSE
+┌───────────────────────────┴─────────────────────────────────────┐
+│                         BACKEND (FastAPI)                        │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                      API Layer (11 routers)                 │ │
+│  │  pptx | pptx_translate | tm | llm | export | preserve_terms │ │
+│  └──────────────────────────┬─────────────────────────────────┘ │
+│  ┌──────────────────────────┴─────────────────────────────────┐ │
+│  │                    Service Layer (38 modules)               │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │ │
+│  │  │ translate_* │  │ llm_client_*│  │ pptx_*      │         │ │
+│  │  │ (5 modules) │  │ (4 modules) │  │ (4 modules) │         │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘         │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                    Data Layer                               │ │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │ │
+│  │  │ translation_ │  │ translation_ │  │ glossary     │      │ │
+│  │  │ memory.db    │  │ cache.db     │  │ .json        │      │ │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘      │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+┌───────────────────────────┴─────────────────────────────────────┐
+│                      LLM Providers                               │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                       │
+│  │ OpenAI   │  │ Gemini   │  │ Ollama   │                       │
+│  │ (Cloud)  │  │ (Cloud)  │  │ (Local)  │                       │
+│  └──────────┘  └──────────┘  └──────────┘                       │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### 1.3 Key Dependencies
+
+**Backend:**
+
+- `fastapi` - REST API framework
+- `uvicorn` - ASGI server
+- `httpx` - Async HTTP client for LLM APIs
+- `python-pptx` - PPTX file manipulation
+- `pydantic-settings` - Configuration management
+- `langdetect` - Language detection
+
+**Frontend:**
+
+- `react` / `react-dom` - UI framework
+- `vite` - Build tool
+- `tailwindcss` - CSS framework
 
 ---
 
 ## 2. Functional Matrix & User Flows
 
-### 2.1 Core Features
+### 2.1 API Endpoints
 
-| Feature | Description | API Endpoints |
-|---------|-------------|---------------|
-| **PPTX Upload** | Upload PPTX file for processing | `POST /api/pptx/extract` |
-| **Text Extraction** | Extract text blocks from slides | `POST /api/pptx/extract` |
-| **Language Detection** | Auto-detect source/target languages | `POST /api/pptx/languages` |
-| **Translation** | Translate text blocks via LLM | `POST /api/pptx/translate` |
-| **Proofreading** | Manual correction of translations | Frontend only |
-| **PPTX Generation** | Apply translations to new PPTX | `POST /api/pptx/apply` |
-| **Translation Memory** | Store/recall previous translations | `GET/POST /api/tm/*` |
-| **Glossary** | Term-based translation rules | `GET/POST /api/tm/glossary/*` |
-| **LLM Configuration** | Manage LLM providers/models | `POST /api/llm/models` |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pptx/extract` | POST | Extract text blocks from PPTX |
+| `/api/pptx/translate` | POST | Translate blocks using LLM |
+| `/api/pptx/translate-stream` | POST | SSE streaming translation |
+| `/api/pptx/apply` | POST | Apply translations to PPTX |
+| `/api/pptx/languages` | POST | Detect document languages |
+| `/api/pptx/extract-glossary` | POST | Extract glossary terms |
+| `/api/tm/*` | CRUD | Translation Memory operations |
+| `/api/llm/models` | GET | List available LLM models |
+| `/api/llm/test-connection` | POST | Test LLM connectivity |
+| `/api/export/*` | POST | Export to various formats |
+| `/api/preserve-terms/*` | CRUD | Manage preserved terms |
 
-### 2.2 User Flow
+### 2.2 Primary User Flow
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant B as Backend
-    participant L as LLM Provider
-    
-    U->>F: Upload PPTX
-    F->>B: POST /api/pptx/extract
-    B-->>F: Text blocks array
-    F->>B: POST /api/pptx/languages
-    B-->>F: Detected languages
-    U->>F: Select target language
-    U->>F: Click "Translate"
-    F->>B: POST /api/pptx/translate
-    B->>L: Send translation request
-    L-->>B: Translated text
-    B-->>F: Translated blocks
-    U->>F: Review/Edit translations
-    U->>F: Click "Generate PPTX"
-    F->>B: POST /api/pptx/apply
-    B-->>F: Download file
+```
+┌──────────────┐    ┌───────────────┐    ┌────────────────┐
+│ 1. Upload    │───▶│ 2. Extract    │───▶│ 3. Review      │
+│    PPTX      │    │    Blocks     │    │    Source      │
+└──────────────┘    └───────────────┘    └────────────────┘
+                                                  │
+                                                  ▼
+┌──────────────┐    ┌───────────────┐    ┌────────────────┐
+│ 6. Download  │◀───│ 5. Apply to   │◀───│ 4. Translate   │
+│    Result    │    │    PPTX       │    │    (LLM)       │
+└──────────────┘    └───────────────┘    └────────────────┘
 ```
 
-### 2.3 Processing Modes
+### 2.3 Translation Pipeline
 
-| Mode | Description | Use Case |
-|------|-------------|----------|
-| **翻譯** (Translation) | Full translation of source text | New translations |
-| **校正** (Proofreading) | Correct existing translations | Quality review |
-| **雙語輸出** (Bilingual) | Output both source and translated text | Training materials |
+```python
+# Pseudocode: Translation Flow
+def translate_blocks(blocks, target_language, provider):
+    # 1. Check Translation Memory
+    for block in blocks:
+        if hit := lookup_tm(block.source_text, target_language):
+            block.translated_text = hit
+            continue
+        pending.append(block)
+
+    # 2. Chunk pending blocks
+    for chunk in chunked(pending, chunk_size):
+        # 3. Check cache
+        uncached = get_uncached_blocks(chunk)
+
+        # 4. Dispatch to LLM provider
+        if provider == "ollama":
+            result = translate_ollama(uncached)
+        else:
+            result = translate_standard(uncached)
+
+        # 5. Validate language
+        if has_language_mismatch(result, target_language):
+            result = retry_for_language(result)
+
+        # 6. Cache results
+        cache_results(result)
+
+    return build_contract(blocks, translated_texts)
+```
 
 ---
 
 ## 3. Data Schema
 
-### 3.1 Block (Text Unit)
+### 3.1 PPTXBlock Contract
 
 ```typescript
-interface Block {
-  slide_index: number;      // 0-based slide index
-  shape_index: number;      // Shape index within slide
-  shape_type: string;       // "textbox" | "table" | "shape"
-  source_text: string;      // Original text content
-  translated_text?: string; // Translated content
-  client_id?: string;       // Unique identifier
-  selected?: boolean;       // User selection state
-  isTranslating?: boolean;  // Translation in progress
-  output_mode?: string;     // "translate" | "keep" | "bilingual"
+interface PPTXBlock {
+    slide_index: number;      // 0-indexed slide number
+    shape_id: number;         // Unique shape identifier
+    block_type: "textbox" | "table_cell" | "notes";
+    source_text: string;      // Original text
+    translated_text: string;  // Translated text (default: "")
+    client_id?: string;       // Optional client-side ID
+    mode: "direct" | "bilingual" | "correction";
 }
 ```
 
-### 3.2 LLM Configuration
+### 3.2 Translation Memory Schema (SQLite)
 
-```typescript
-interface LLMSettings {
-  providers: {
-    chatgpt: ProviderConfig;
-    gemini: ProviderConfig;
-    ollama: ProviderConfig;
-  };
-  active: string;           // Current provider key
-}
-
-interface ProviderConfig {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-}
+```sql
+CREATE TABLE translation_memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_lang TEXT NOT NULL,
+    target_lang TEXT NOT NULL,
+    source_text TEXT NOT NULL,
+    target_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(source_lang, target_lang, source_text)
+);
 ```
 
-### 3.3 Translation Memory Entry
+### 3.3 Translation Cache Schema (SQLite)
 
-```typescript
-interface TMEntry {
-  source_lang: string;      // e.g., "vi"
-  target_lang: string;      // e.g., "zh-TW"
-  source_text: string;      // Original text
-  translated_text: string;  // Stored translation
-  created_at?: string;      // ISO timestamp
-}
+```sql
+CREATE TABLE translation_cache (
+    source_text TEXT NOT NULL,
+    target_lang TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    translated_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (source_text, target_lang, provider, model)
+);
 ```
 
-### 3.4 Glossary Entry
+### 3.4 Configuration Schema
 
-```typescript
-interface GlossaryEntry {
-  source_lang: string;
-  target_lang: string;
-  term: string;             // Source term
-  translation: string;      // Target term
-  priority?: number;        // Matching priority
-}
+```python
+class Settings(BaseSettings):
+    # LLM Provider Selection
+    llm_provider: str = "ollama"  # ollama | openai | gemini
+    translate_llm_mode: str = "real"  # real | mock
+
+    # Ollama
+    ollama_base_url: str = "http://ollama:11434"
+    ollama_model: str = "qwen2.5:7b"
+    ollama_timeout: int = 180
+
+    # OpenAI
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+
+    # Gemini
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-1.5-flash"
+
+    # Performance
+    llm_chunk_size: int = 40
+    llm_max_retries: int = 2
+    llm_fallback_on_error: bool = False
 ```
 
 ---
@@ -200,258 +220,142 @@ interface GlossaryEntry {
 
 ### 4.1 Color Palette
 
-```css
-:root {
-  /* Base Colors */
-  --bg: #f4f6fb;
-  --panel: #ffffff;
-  --panel-alt: #f9fafc;
-  --text: #1c1f2a;
-  --muted: #566074;
-  
-  /* Accent Colors */
-  --accent: #1f3b74;
-  --accent-strong: #0b1f46;
-  --accent-soft: #dce7fb;
-  
-  /* Functional Colors */
-  --border: #d8e0f0;
-  --color-primary: #0f62fe;
-  
-  /* Correction Mode */
-  --correction-fill: #fff16a;
-  --correction-text: #d90000;
-  --correction-line: #7b2cb9;
-}
-```
+| Token | Value | Usage |
+|-------|-------|-------|
+| `accent` | `#2563eb` | Primary buttons, links |
+| `accent-strong` | `#1e3a8a` | Hover states |
+| `accent-soft` | `#eff6ff` | Background highlights |
+| `bg-primary` | `#ffffff` | Card backgrounds |
+| `bg-secondary` | `#f8fafc` | Page background |
+| `text-primary` | `#1e293b` | Main text |
+| `text-secondary` | `#64748b` | Secondary text |
 
 ### 4.2 Typography
 
-```css
-font-family: "IBM Plex Sans", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-```
+| Element | Font | Size | Weight |
+|---------|------|------|--------|
+| Heading 1 | Inter | 32px | 700 |
+| Heading 2 | Inter | 24px | 600 |
+| Body | Inter | 14px | 400 |
+| Caption | Inter | 12px | 400 |
 
-### 4.3 Spacing & Layout
+### 4.3 Spacing & Radius
 
-```css
---radius: 18px;
---shadow: 0 24px 48px rgba(19, 33, 68, 0.12);
+| Token | Value |
+|-------|-------|
+| `radius-lg` | 12px |
+| `radius-xl` | 20px |
+| `spacing-sm` | 8px |
+| `spacing-md` | 16px |
+| `spacing-lg` | 24px |
 
-/* Grid Layout */
-.grid {
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  gap: 24px;
-}
-```
+### 4.4 Component Library
 
-### 4.4 Responsive Breakpoints
-
-| Breakpoint | Width | Behavior |
-|------------|-------|----------|
-| Desktop | > 1024px | 2-column grid |
-| Tablet | 768px - 1024px | Single column, horizontal tabs |
-| Mobile | < 768px | Stacked layout, 48px touch targets |
-| Small | < 480px | Minimal padding, full-width buttons |
+| Component | File | Description |
+|-----------|------|-------------|
+| `Sidebar` | Sidebar.jsx | File upload, language selection |
+| `BlockList` | BlockList.jsx | List of extracted blocks |
+| `BlockCard` | BlockCard.jsx | Individual block display |
+| `EditorPanel` | EditorPanel.jsx | Translation editing |
+| `SettingsModal` | SettingsModal.jsx | LLM configuration |
+| `ManageModal` | ManageModal.jsx | TM/Glossary management |
+| `ExportMenu` | ExportMenu.jsx | Export options |
+| `QualityBadge` | QualityBadge.jsx | Translation quality indicator |
 
 ---
 
-## 5. Technical Logic (Pseudocode)
+## 5. Technical Logic
 
-### 5.1 Translation Pipeline
+### 5.1 LLM Provider Selection
 
 ```python
-def translate_blocks(blocks, target_language, provider, model):
-    # 1. Check Translation Memory
-    for block in blocks:
-        if tm_hit := lookup_tm(block.source_text, target_language):
-            block.translated_text = tm_hit
-            mark_as_cached(block)
-    
-    # 2. Chunk remaining blocks for LLM
-    pending_blocks = [b for b in blocks if not b.translated_text]
-    chunks = chunk_by_size(pending_blocks, chunk_size=6)
-    
-    # 3. Process each chunk
-    for chunk in chunks:
-        attempts = 0
-        while attempts < max_retries:
-            try:
-                # Build prompt with context
-                prompt = build_prompt(chunk, target_language)
-                
-                # Call LLM provider
-                response = llm_client.translate(prompt)
-                
-                # Parse and validate response
-                results = parse_response(response)
-                
-                # Language validation (50% threshold)
-                if count_matching(results, target_language) >= len(results) * 0.5:
-                    apply_results(chunk, results)
-                    save_to_tm(chunk, results)
-                    break
-                else:
-                    # Retry with strict mode
-                    retry_with_language_guard()
-                    
-            except Exception as e:
-                attempts += 1
-                backoff_delay()
-    
-    return blocks
+def select_translator(provider, model, api_key, base_url):
+    match provider.lower():
+        case "openai":
+            validate_api_key(api_key or settings.openai_api_key)
+            return OpenAITranslator(api_key, model, base_url)
+        case "gemini":
+            validate_api_key(api_key or settings.gemini_api_key)
+            return GeminiTranslator(api_key, model)
+        case "ollama":
+            return OllamaTranslator(base_url or settings.ollama_base_url, model)
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
 ```
 
-### 5.2 Language Detection
+### 5.2 Retry with Language Validation
 
 ```python
-def detect_language(text: str) -> str | None:
-    # Priority 1: Vietnamese diacritics (≥2 characters)
-    if count_vietnamese_chars(text) >= 2:
-        return "vi"
-    
-    # Priority 2: CJK characters
-    if has_cjk_chars(text):
-        return detect_zh_variant(text)  # zh-TW or zh-CN
-    
-    # Priority 3: langdetect library
-    return normalize_lang(langdetect.detect(text))
+def retry_for_language(result, target_language, max_retries=2):
+    for attempt in range(max_retries):
+        texts = [block.translated_text for block in result.blocks]
+        if not has_language_mismatch(texts, target_language):
+            return result
+
+        # Build strict retry context
+        context = build_language_retry_context(target_language)
+        result = translator.translate(blocks, context=context)
+
+    raise ValueError(f"Language mismatch persists: {target_language}")
 ```
 
-### 5.3 PPTX Processing
+### 5.3 SSE Progress Streaming
 
 ```python
-def apply_translations(original_pptx, blocks, output_mode):
-    prs = Presentation(original_pptx)
-    
-    for block in blocks:
-        slide = prs.slides[block.slide_index]
-        shape = slide.shapes[block.shape_index]
-        
-        if output_mode == "translate":
-            replace_text(shape, block.translated_text)
-        elif output_mode == "bilingual":
-            append_text(shape, block.translated_text, separator="\n")
-        elif output_mode == "keep":
-            pass  # No change
-    
-    return save_to_buffer(prs)
+async def translate_stream(blocks, target_language, on_progress):
+    queue = asyncio.Queue()
+
+    async def progress_callback(data):
+        await queue.put({"event": "progress", "data": data})
+
+    task = asyncio.create_task(
+        translate_blocks_async(blocks, on_progress=progress_callback)
+    )
+
+    while not task.done():
+        try:
+            event = await asyncio.wait_for(queue.get(), timeout=0.1)
+            yield f"event: {event['event']}\ndata: {event['data']}\n\n"
+        except asyncio.TimeoutError:
+            continue
+
+    result = await task
+    yield f"event: complete\ndata: {json.dumps(result)}\n\n"
 ```
 
 ---
 
-## 6. API Reference
+## 6. Deployment
 
-### 6.1 PPTX Endpoints
+### 6.1 Docker Compose
 
-```http
-POST /api/pptx/extract
-Content-Type: multipart/form-data
-Body: file=<pptx_file>
-Response: { "blocks": Block[], "slide_count": number }
+```yaml
+services:
+  backend:
+    build: { dockerfile: Dockerfile.backend }
+    ports: ["5001:5001"]
+    environment:
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ./data:/app/data
 
-POST /api/pptx/languages
-Content-Type: multipart/form-data
-Body: file=<pptx_file>
-Response: { "primary": string, "secondary": string, "counts": object }
+  frontend:
+    build: { dockerfile: Dockerfile.frontend }
+    ports: ["5173:80"]
+    depends_on: [backend]
 
-POST /api/pptx/translate
-Content-Type: application/json
-Body: { "blocks": Block[], "target_language": string, "provider": string, "model": string }
-Response: { "blocks": Block[], "target_language": string }
-
-POST /api/pptx/apply
-Content-Type: multipart/form-data
-Body: file=<pptx_file>, blocks=<json>, output_mode=<string>
-Response: application/octet-stream (PPTX file)
+  ollama:
+    image: ollama/ollama
+    ports: ["11434:11434"]
+    volumes:
+      - ollama_data:/root/.ollama
 ```
 
-### 6.2 LLM Endpoints
+### 6.2 Environment Variables
 
-```http
-POST /api/llm/models
-Content-Type: application/json
-Body: { "provider": string, "api_key": string, "base_url": string }
-Response: { "models": string[] }
-```
-
-### 6.3 Translation Memory Endpoints
-
-```http
-GET /api/tm/entries
-Response: TMEntry[]
-
-POST /api/tm/entries
-Body: TMEntry
-Response: { "status": "ok" }
-
-DELETE /api/tm/entries
-Body: { source_lang, target_lang, source_text }
-Response: { "status": "ok" }
-```
+See [.env.example](file:///Users/japlin.chenvpic1.com.vn/Downloads/PPT_Translate/.env.example) for complete list.
 
 ---
 
-## 7. Deployment Configuration
-
-### 7.1 Environment Variables
-
-```bash
-# Server
-PORT=5001
-HOST=0.0.0.0
-
-# LLM Providers
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen2.5:7b
-GEMINI_API_KEY=<key>
-OPENAI_API_KEY=<key>
-
-# Translation Settings
-TRANSLATE_LLM_MODE=real
-LLM_CHUNK_SIZE=40
-LLM_MAX_RETRIES=2
-```
-
-### 7.2 Docker Deployment
-
-```bash
-# Start all services
-docker compose up -d --build
-
-# Access points
-Frontend: http://localhost:5193
-Backend:  http://localhost:5001
-API Docs: http://localhost:5001/docs
-```
-
-### 7.3 Ollama Setup (Required for local LLM)
-
-```bash
-# Start Ollama with Docker-compatible binding
-OLLAMA_HOST=0.0.0.0 ollama serve
-
-# Pull a model
-ollama pull qwen2.5:7b
-```
-
----
-
-## 8. Security Considerations
-
-1. **API Keys**: Stored in frontend `localStorage`, transmitted over HTTPS
-2. **CORS**: Configured to allow specific origins
-3. **File Uploads**: Size limit enforced by nginx (100MB)
-4. **Container Isolation**: Backend and frontend in separate containers
-
----
-
-## 9. Known Limitations
-
-1. **Language Detection**: Requires ≥2 Vietnamese diacritics to detect Vietnamese
-2. **Bilingual Source**: Documents with mixed languages may trigger false mismatch warnings
-3. **Image Text**: OCR not supported; text in images is not translated
-4. **Large Files**: Files >100MB may timeout
-
----
-
-*This document enables a developer to rebuild the application from scratch.*
+*Generated: 2026-01-18*

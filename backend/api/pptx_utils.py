@@ -3,6 +3,7 @@
 This module contains file validation, extension checking,
 and shared constants for PPTX API endpoints.
 """
+
 from __future__ import annotations
 
 SUPPORTED_EXTENSIONS = {".pptx", ".docx"}
@@ -18,10 +19,10 @@ def get_file_extension(filename: str | None) -> str:
 
 def validate_file_type(filename: str | None) -> tuple[bool, str]:
     """Validate uploaded file type.
-    
+
     Args:
         filename: Name of the uploaded file
-        
+
     Returns:
         Tuple of (is_valid, error_message)
     """

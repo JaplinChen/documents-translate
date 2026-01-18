@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections import Counter
-from functools import lru_cache
-from typing import Iterable
-
 import re
+from collections import Counter
+from collections.abc import Iterable
+from functools import lru_cache
 
 from langdetect import DetectorFactory, LangDetectException, detect
 
@@ -82,7 +81,6 @@ def detect_language(text: str) -> str | None:
         return lang
     except LangDetectException:
         return None
-
 
 
 def detect_document_languages(blocks: Iterable[dict]) -> dict:

@@ -16,11 +16,9 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
-
 
 # 專案根目錄
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -112,14 +110,10 @@ def find_temp_files(root: Path) -> list[Path]:
         if pattern.startswith("*."):
             # 擴展名模式
             ext = pattern[1:]  # ".log"
-            results.extend(
-                find_items(root, lambda p, e=ext: p.is_file() and p.suffix == e)
-            )
+            results.extend(find_items(root, lambda p, e=ext: p.is_file() and p.suffix == e))
         else:
             # 完整檔名模式
-            results.extend(
-                find_items(root, lambda p, name=pattern: p.is_file() and p.name == name)
-            )
+            results.extend(find_items(root, lambda p, name=pattern: p.is_file() and p.name == name))
     return results
 
 

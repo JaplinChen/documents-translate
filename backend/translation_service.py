@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ def build_translation_contract(
     target_language: str = "zh-TW",
 ) -> dict:
     contract_blocks = []
-    for block, translated_text in zip(blocks, translated_texts):
+    for block, translated_text in zip(blocks, translated_texts, strict=False):
         block_type = "paragraph"
         block_id = block.get("id", "")
         if block_id.startswith("t"):

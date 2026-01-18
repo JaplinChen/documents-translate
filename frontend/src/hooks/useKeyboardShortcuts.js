@@ -2,9 +2,9 @@ import { useEffect, useCallback } from "react";
 
 /**
  * Keyboard Shortcuts Hook
- * 
+ *
  * Provides global keyboard shortcuts for the application.
- * 
+ *
  * Shortcuts:
  * - Ctrl/Cmd + S: Save (prevent default)
  * - Ctrl/Cmd + Enter: Trigger translate

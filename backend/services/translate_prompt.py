@@ -3,6 +3,7 @@
 This module contains prompt construction logic for Ollama batch translation
 and response parsing utilities.
 """
+
 from __future__ import annotations
 
 import os
@@ -22,12 +23,12 @@ def build_ollama_batch_prompt(
     blocks: list[dict], target_language: str, strict: bool = False
 ) -> str:
     """Build batch translation prompt for Ollama.
-    
+
     Args:
         blocks: List of text blocks to translate
         target_language: Target language code
         strict: If True, add stricter language verification
-        
+
     Returns:
         Formatted prompt string for Ollama
     """
@@ -39,7 +40,7 @@ def build_ollama_batch_prompt(
         if strict
         else "Every line MUST be in the target language."
     )
-    
+
     blocks_lines: list[str] = []
     for idx, block in enumerate(blocks):
         blocks_lines.append(f"<<<BLOCK:{idx}>>>")
@@ -47,7 +48,7 @@ def build_ollama_batch_prompt(
         blocks_lines.append("<<<END>>>")
         blocks_lines.append("")
     blocks_text = "\n".join(blocks_lines).strip()
-    
+
     tone = os.getenv("LLM_TONE")
     use_vision = os.getenv("LLM_VISION_CONTEXT") == "1"
     tone_hint = get_tone_instruction(tone)
@@ -86,11 +87,11 @@ def build_ollama_batch_prompt(
 
 def parse_ollama_batch_response(text: str, count: int) -> list[str] | None:
     """Parse Ollama batch translation response.
-    
+
     Args:
         text: Raw response text from Ollama
         count: Expected number of translated blocks
-        
+
     Returns:
         List of translated texts if successful, None if format mismatch
     """
@@ -98,7 +99,7 @@ def parse_ollama_batch_response(text: str, count: int) -> list[str] | None:
     matches = pattern.findall(text)
     if not matches:
         return None
-    
+
     translated = [""] * count
     for idx_str, content in matches:
         try:
@@ -107,7 +108,7 @@ def parse_ollama_batch_response(text: str, count: int) -> list[str] | None:
             continue
         if 0 <= idx < count:
             translated[idx] = content.strip()
-    
+
     if any(item == "" for item in translated):
         return None
     return translated

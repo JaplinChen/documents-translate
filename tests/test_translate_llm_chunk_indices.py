@@ -1,10 +1,11 @@
+from backend.config import settings
 from backend.services.translate_llm import translate_blocks
 
 
 def test_translate_blocks_chunk_indices(monkeypatch) -> None:
-    monkeypatch.setenv("TRANSLATE_LLM_MODE", "mock")
-    monkeypatch.setenv("LLM_SINGLE_REQUEST", "0")
-    monkeypatch.setenv("LLM_CHUNK_SIZE", "1")
+    monkeypatch.setattr(settings, "translate_llm_mode", "mock")
+    monkeypatch.setattr(settings, "llm_single_request", False)
+    monkeypatch.setattr(settings, "llm_chunk_size", 1)
 
     blocks = [
         {

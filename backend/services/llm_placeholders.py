@@ -3,9 +3,7 @@ from __future__ import annotations
 import re
 
 
-def apply_placeholders(
-    text: str, terms: list[tuple[str, str]]
-) -> tuple[str, dict[str, str]]:
+def apply_placeholders(text: str, terms: list[tuple[str, str]]) -> tuple[str, dict[str, str]]:
     if not text or not terms:
         return text, {}
     term_map = {}
