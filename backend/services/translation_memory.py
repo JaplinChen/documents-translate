@@ -8,6 +8,9 @@ from typing import Iterable
 
 DB_PATH = Path(__file__).resolve().parents[2] / "data" / "translation_memory.db"
 
+# Module-level initialization flag for performance
+_DB_INITIALIZED = False
+
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS glossary (
@@ -33,9 +36,15 @@ CREATE TABLE IF NOT EXISTS tm (
 
 
 def _ensure_db() -> None:
+    """Initialize DB only once per process for better performance."""
+    global _DB_INITIALIZED
+    if _DB_INITIALIZED:
+        return
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(DB_PATH) as conn:
         conn.executescript(SCHEMA_SQL)
+    _DB_INITIALIZED = True
+
 
 
 def _hash_text(source_lang: str, target_lang: str, text: str) -> str:
@@ -141,11 +150,16 @@ def get_tm_terms_any(target_lang: str, limit: int = 200) -> list[tuple[str, str]
 def seed_glossary(entries: Iterable[tuple[str, str, str, str, int | None]]) -> None:
     _ensure_db()
     with sqlite3.connect(DB_PATH) as conn:
-        conn.executemany(
-            "INSERT INTO glossary (source_lang, target_lang, source_text, target_text, priority) "
-            "VALUES (?, ?, ?, ?, COALESCE(?, 0))",
-            entries,
-        )
+        for source_lang, target_lang, source_text, target_text, priority in entries:
+            conn.execute(
+                "DELETE FROM glossary WHERE source_lang = ? AND target_lang = ? AND source_text = ?",
+                (source_lang, target_lang, source_text),
+            )
+            conn.execute(
+                "INSERT INTO glossary (source_lang, target_lang, source_text, target_text, priority) "
+                "VALUES (?, ?, ?, ?, COALESCE(?, 0))",
+                (source_lang, target_lang, source_text, target_text, priority),
+            )
         conn.commit()
 
 
@@ -228,6 +242,42 @@ def upsert_glossary(entry: dict) -> None:
             ),
         )
         conn.commit()
+
+
+def batch_upsert_glossary(entries: list[dict]) -> None:
+    if not entries:
+        return
+    _ensure_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        for entry in entries:
+            conn.execute(
+                "DELETE FROM glossary WHERE source_lang = ? AND target_lang = ? AND source_text = ?",
+                (
+                    entry.get("source_lang"),
+                    entry.get("target_lang"),
+                    entry.get("source_text"),
+                ),
+            )
+            conn.execute(
+                "INSERT INTO glossary (source_lang, target_lang, source_text, target_text, priority) "
+                "VALUES (?, ?, ?, ?, COALESCE(?, 0))",
+                (
+                    entry.get("source_lang"),
+                    entry.get("target_lang"),
+                    entry.get("source_text"),
+                    entry.get("target_text"),
+                    entry.get("priority", 0),
+                ),
+            )
+        conn.commit()
+
+
+def clear_glossary() -> int:
+    _ensure_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.execute("DELETE FROM glossary")
+        conn.commit()
+        return cur.rowcount
 
 
 def delete_glossary(entry_id: int) -> int:

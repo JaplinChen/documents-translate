@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import SettingsModal from "./components/SettingsModal";
 import ManageModal from "./components/ManageModal";
-import { Header } from "./components/Header";
+import { Navbar } from "./components/Navbar";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPanel } from "./components/EditorPanel";
 import { API_BASE } from "./constants";
@@ -30,6 +30,11 @@ function App() {
   const [textColor, setTextColor] = useState("#D90000");
   const [lineColor, setLineColor] = useState("#7B2CB9");
   const [lineDash, setLineDash] = useState("dash");
+
+  // Advanced AI Settings
+  const [llmTone, setLlmTone] = useState("professional"); // professional, concise, humorous, pm, creative
+  const [useVisionContext, setUseVisionContext] = useState(true);
+  const [useSmartLayout, setUseSmartLayout] = useState(true);
 
   const leftPanelRef = useRef(null);
   const editorRefs = useRef({});
@@ -84,6 +89,8 @@ function App() {
   };
 
   // --- Effects ---
+  // Auto-extract: When file is selected, immediately extract text and detect language
+  // This is separate from translation - just getting the content ready
   useEffect(() => {
     if (!file) return;
     processor.handleExtract().then(applyDetectedLanguages);
@@ -107,9 +114,35 @@ function App() {
     setBlocks(prev => prev.map(b => b._uid === uid ? { ...b, output_mode: value } : b));
   };
 
+  const isFileSelected = !!file;
+  const isExtracted = blocks.length > 0;
+  const hasTranslation = blocks.some(b => b.translated_text);
+  const isFinished = ui.status.includes("輸出") || ui.status.includes("完成");
+
+  // Determine current step (1-4): Upload → Settings → Translate → Download
+  let currentStep = 1;
+  if (isFinished) currentStep = 4;
+  else if (hasTranslation || ui.status.includes("翻譯")) currentStep = 3;
+  else if (isExtracted) currentStep = 2;
+
+  const steps = [
+    { id: 1, label: "上傳" },
+    { id: 2, label: "設定" },
+    { id: 3, label: "翻譯" },
+    { id: 4, label: "下載" }
+  ];
+
   return (
     <div className="app">
-      <Header status={ui.status} onOpenSettings={() => llm.setLlmOpen(true)} onOpenManage={() => tm.setManageOpen(true)} />
+      <div className="app-sticky-header">
+        <Navbar
+          currentStep={currentStep}
+          steps={steps}
+          status={ui.status}
+          onOpenSettings={() => llm.setLlmOpen(true)}
+          onOpenManage={() => tm.setManageOpen(true)}
+        />
+      </div>
 
       <main className="main-grid">
         <Sidebar
@@ -123,6 +156,16 @@ function App() {
           languageOptions={languageOptions}
           busy={ui.busy}
           onExtract={processor.handleExtract}
+          onExtractGlossary={() => tm.handleExtractGlossary({
+            blocks,
+            targetLang,
+            llmProvider: llm.llmProvider,
+            llmApiKey: llm.llmApiKey,
+            llmBaseUrl: llm.llmBaseUrl,
+            llmModel: llm.llmModel,
+            setStatus: ui.setStatus,
+            setBusy: ui.setBusy
+          })}
           onTranslate={processor.handleTranslate}
           onApply={processor.handleApply}
           canApply={file && blocks.length > 0 && !ui.busy}
@@ -131,6 +174,10 @@ function App() {
           status={ui.status}
           sidebarRef={leftPanelRef}
           modeDescription={mode === "correction" ? "中文校正模式" : "翻譯模式"}
+          llmTone={llmTone} setLlmTone={setLlmTone}
+          useVisionContext={useVisionContext} setUseVisionContext={setUseVisionContext}
+          useSmartLayout={useSmartLayout} setUseSmartLayout={setUseSmartLayout}
+          blocks={blocks}
         />
 
         <EditorPanel
@@ -170,6 +217,22 @@ function App() {
         textColor={textColor} setTextColor={setTextColor}
         lineColor={lineColor} setLineColor={setLineColor}
         lineDash={lineDash} setLineDash={setLineDash}
+
+        llmTone={llmTone} setLlmTone={setLlmTone}
+        useVisionContext={useVisionContext} setUseVisionContext={setUseVisionContext}
+        useSmartLayout={useSmartLayout} setUseSmartLayout={setUseSmartLayout}
+        onExtractGlossary={() => tm.handleExtractGlossary({
+          blocks,
+          targetLang,
+          llmProvider: llm.llmProvider,
+          llmApiKey: llm.llmApiKey,
+          llmBaseUrl: llm.llmBaseUrl,
+          llmModel: llm.llmModel,
+          setStatus: ui.setStatus,
+          setBusy: ui.setBusy
+        })}
+        busy={ui.busy}
+        status={ui.status}
         apiBase={API_BASE}
       />
 
@@ -184,11 +247,14 @@ function App() {
         onSeed={tm.handleSeedTm}
         onUpsertGlossary={tm.upsertGlossary}
         onDeleteGlossary={tm.deleteGlossary}
+        onClearGlossary={tm.clearGlossary}
         onUpsertMemory={tm.upsertMemory}
         onDeleteMemory={tm.deleteMemory}
         onClearMemory={tm.clearMemory}
         onConvertToGlossary={tm.convertMemoryToGlossary}
+        onConvertToPreserveTerm={tm.convertGlossaryToPreserveTerm}
       />
+
     </div>
   );
 }

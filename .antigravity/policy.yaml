@@ -1,0 +1,51 @@
+agent:
+  execution:
+    require_confirmation: true
+    allow:
+      - docker
+      - make
+      - npm
+      - curl
+      - git
+      - python
+      - python3
+      - pip
+      - node
+      - yarn
+      - wget
+      - grep
+      - echo
+      - export
+      - unset
+      - source
+      - cd
+      - ls
+      - pwd
+      - cat
+      - less
+      - more
+      - head
+      - tail
+      - touch
+      - mkdir
+      - cp
+      - mv
+      - find
+      - grep
+      - sed
+      - awk
+      - cut
+      - sort
+      - uniq
+      - wc
+      - diff
+      - patch
+      - tar
+      - gzip
+      - gunzip
+      - zip
+      - unzip
+      - ssh
+      - scp
+
+

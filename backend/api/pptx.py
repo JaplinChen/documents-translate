@@ -1,3 +1,8 @@
+"""PPTX translation API endpoints.
+
+This module provides REST API endpoints for PPTX file extraction,
+translation, and application of translated content.
+"""
 from __future__ import annotations
 
 import json
@@ -5,13 +10,18 @@ import os
 import tempfile
 from contextlib import contextmanager
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Response
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 
+from backend.api.pptx_utils import validate_file_type
 from backend.contracts import coerce_blocks
 from backend.services.language_detect import (
     detect_document_languages,
     detect_language,
     resolve_source_language,
+)
+from backend.services.llm_errors import (
+    build_connection_refused_message,
+    is_connection_refused,
 )
 from backend.services.pptx_apply import (
     apply_bilingual,
@@ -20,48 +30,14 @@ from backend.services.pptx_apply import (
 )
 from backend.services.pptx_extract import extract_blocks as extract_pptx_blocks
 from backend.services.translate_llm import translate_blocks as translate_pptx_blocks
-from backend.services.llm_errors import (
-    build_connection_refused_message,
-    is_connection_refused,
-)
 
 router = APIRouter(prefix="/api/pptx")
-
-SUPPORTED_EXTENSIONS = {".pptx", ".docx"}
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
-
-
-def _get_file_extension(filename: str | None) -> str:
-    if not filename or "." not in filename:
-        return ""
-    return "." + filename.lower().split(".")[-1]
-
-
-def _validate_file_type(filename: str | None) -> tuple[bool, str]:
-    if not filename:
-        return False, "請選擇檔案"
-
-    ext = _get_file_extension(filename)
-
-    if ext in IMAGE_EXTENSIONS:
-        return (
-            False,
-            (
-                f"不支援圖片檔案 ({filename})。此工具只支援翻譯 PPTX 或 DOCX "
-                "檔案中的文字內容。若需翻譯圖片文字，請改用支援視覺模型的 LLM API "
-                "(例如 GPT-4o)。"
-            ),
-        )
-
-    if ext not in SUPPORTED_EXTENSIONS:
-        return False, f"不支援的檔案格式 ({ext})，僅支援 .pptx 或 .docx"
-
-    return True, ""
 
 
 @router.post("/extract")
 async def pptx_extract(file: UploadFile = File(...)) -> dict:
-    valid, error_msg = _validate_file_type(file.filename)
+    """Extract text blocks from PPTX file."""
+    valid, error_msg = validate_file_type(file.filename)
     if not valid:
         raise HTTPException(status_code=400, detail=error_msg)
 
@@ -82,7 +58,8 @@ async def pptx_extract(file: UploadFile = File(...)) -> dict:
 
 @router.post("/languages")
 async def pptx_languages(file: UploadFile = File(...)) -> dict:
-    valid, error_msg = _validate_file_type(file.filename)
+    """Detect languages in PPTX file."""
+    valid, error_msg = validate_file_type(file.filename)
     if not valid:
         raise HTTPException(status_code=400, detail=error_msg)
     try:
@@ -111,7 +88,8 @@ async def pptx_apply(
     line_color: str | None = Form(None),
     line_dash: str | None = Form(None),
 ) -> Response:
-    valid, error_msg = _validate_file_type(file.filename)
+    """Apply translated blocks to PPTX file."""
+    valid, error_msg = validate_file_type(file.filename)
     if not valid:
         raise HTTPException(status_code=400, detail=error_msg)
     try:
@@ -124,7 +102,7 @@ async def pptx_apply(
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="blocks JSON 無效") from exc
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="blocks 資料無效") from exc
+        raise HTTPException(status_code=400, detail="blocks 資料無效 (apply)") from exc
 
     if mode not in {"bilingual", "correction", "translated"}:
         raise HTTPException(status_code=400, detail="不支援的 mode")
@@ -143,13 +121,9 @@ async def pptx_apply(
             apply_translations(input_path, output_path, blocks_data, mode="direct")
         else:
             apply_chinese_corrections(
-                input_path,
-                output_path,
-                blocks_data,
-                fill_color=fill_color,
-                text_color=text_color,
-                line_color=line_color,
-                line_dash=line_dash,
+                input_path, output_path, blocks_data,
+                fill_color=fill_color, text_color=text_color,
+                line_color=line_color, line_dash=line_dash,
             )
 
         with open(output_path, "rb") as handle:
@@ -160,6 +134,42 @@ async def pptx_apply(
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         headers={"Content-Disposition": "attachment; filename=output.pptx"},
     )
+
+
+def _prepare_blocks_for_correction(
+    items: list[dict], source_language: str | None
+) -> list[dict]:
+    """Prepare blocks for correction mode by filtering by source language."""
+    if not source_language or source_language == "auto":
+        return items
+    prepared = []
+    for block in items:
+        text = block.get("source_text", "")
+        if not text:
+            prepared.append(block)
+            continue
+        lines = [line for line in text.splitlines() if detect_language(line) == source_language]
+        prepared_block = dict(block)
+        prepared_block["source_text"] = "\n".join(lines)
+        prepared.append(prepared_block)
+    return prepared
+
+
+@contextmanager
+def _temporary_env(updates: dict[str, str]):
+    """Temporarily update environment variables."""
+    previous = {}
+    for key, value in updates.items():
+        previous[key] = os.environ.get(key)
+        os.environ[key] = value
+    try:
+        yield
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 @router.post("/translate")
@@ -175,53 +185,23 @@ async def pptx_translate(
     api_key: str | None = Form(None),
     base_url: str | None = Form(None),
     ollama_fast_mode: bool = Form(False),
+    tone: str | None = Form(None),
+    vision_context: bool = Form(True),
+    smart_layout: bool = Form(True),
 ) -> dict:
+    """Translate text blocks using LLM."""
     llm_mode = os.getenv("TRANSLATE_LLM_MODE", "real").lower()
     try:
         blocks_data = coerce_blocks(json.loads(blocks))
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="blocks JSON 無效") from exc
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="blocks 資料無效") from exc
+        raise HTTPException(status_code=400, detail="blocks 資料無效 (translate)") from exc
 
     if not target_language:
         raise HTTPException(status_code=400, detail="target_language 為必填")
 
-    def _prepare_blocks_for_correction(items: list[dict]) -> list[dict]:
-        if not source_language or source_language == "auto":
-            return items
-        prepared = []
-        for block in items:
-            text = block.get("source_text", "")
-            if not text:
-                prepared.append(block)
-                continue
-            lines = []
-            for line in text.splitlines():
-                lang = detect_language(line)
-                if lang == source_language:
-                    lines.append(line)
-            prepared_block = dict(block)
-            prepared_block["source_text"] = "\n".join(lines)
-            prepared.append(prepared_block)
-        return prepared
-
     resolved_source_language = resolve_source_language(blocks_data, source_language)
-
-    @contextmanager
-    def _temporary_env(updates: dict[str, str]):
-        previous = {}
-        for key, value in updates.items():
-            previous[key] = os.environ.get(key)
-            os.environ[key] = value
-        try:
-            yield
-        finally:
-            for key, value in previous.items():
-                if value is None:
-                    os.environ.pop(key, None)
-                else:
-                    os.environ[key] = value
 
     env_updates: dict[str, str] = {}
     if resolved_source_language:
@@ -230,19 +210,25 @@ async def pptx_translate(
         env_updates["LLM_SINGLE_REQUEST"] = "0"
         env_updates["LLM_CHUNK_SIZE"] = "1"
         env_updates["LLM_CHUNK_DELAY"] = "0"
+    if tone:
+        env_updates["LLM_TONE"] = tone
+    env_updates["LLM_VISION_CONTEXT"] = "1" if vision_context else "0"
+    env_updates["LLM_SMART_LAYOUT"] = "1" if smart_layout else "0"
 
     try:
         with _temporary_env(env_updates):
             translated = translate_pptx_blocks(
-                _prepare_blocks_for_correction(blocks_data)
-                if mode == "correction"
-                else blocks_data,
+                _prepare_blocks_for_correction(blocks_data, source_language)
+                if mode == "correction" else blocks_data,
                 target_language,
                 use_tm=use_tm,
                 provider=provider,
                 model=model,
                 api_key=api_key,
                 base_url=base_url,
+                tone=tone,
+                vision_context=vision_context,
+                smart_layout=smart_layout,
             )
     except Exception as exc:
         if provider == "ollama" and is_connection_refused(exc):
@@ -263,6 +249,7 @@ async def pptx_translate(
                 ),
             ) from exc
         raise HTTPException(status_code=400, detail=error_msg) from exc
+
     return {
         "mode": mode,
         "source_language": resolved_source_language or source_language,
@@ -271,3 +258,31 @@ async def pptx_translate(
         "llm_mode": llm_mode,
         "warning": "目前為 mock 模式，翻譯結果會回填原文。" if llm_mode == "mock" else None,
     }
+
+
+@router.post("/extract-glossary")
+async def pptx_extract_glossary(
+    blocks: str = Form(...),
+    target_language: str = Form("zh-TW"),
+    provider: str | None = Form(None),
+    model: str | None = Form(None),
+    api_key: str | None = Form(None),
+    base_url: str | None = Form(None),
+) -> dict:
+    """Extract glossary terms from blocks."""
+    from backend.services.glossary_extraction import extract_glossary_terms
+    try:
+        blocks_data = json.loads(blocks)
+        if not isinstance(blocks_data, list):
+            raise ValueError("blocks must be a list")
+    except Exception as exc:
+        raise HTTPException(status_code=418, detail="blocks 資料無效 (glossary)") from exc
+
+    try:
+        terms = extract_glossary_terms(
+            blocks_data, target_language,
+            provider=provider, model=model, api_key=api_key, base_url=base_url
+        )
+        return {"terms": terms}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

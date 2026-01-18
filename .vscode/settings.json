@@ -1,16 +1,64 @@
 {
-    "network_access": "enabled",
-  
-    "terminal.integrated.defaultProfile.windows": "PowerShell 7",
-    "terminal.integrated.profiles.windows": {
-      "PowerShell": {
-        "source": "PowerShell",
-        "icon": "terminal-powershell"
-      },
-      "PowerShell 7": {
-        "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
-        "icon": "terminal-powershell"
-      }
-    }
-  }
-  
+    "antigravityNoPrompts.rules": [
+        {
+            "type": "dialog",
+            "match": "",
+            "action": "accept",
+            "enabled": true
+        },
+        {
+            "type": "dialog",
+            "match": "",
+            "action": "allow",
+            "enabled": true
+        },
+        {
+            "type": "workspaceTrust",
+            "match": "",
+            "action": "accept",
+            "enabled": true
+        },
+        {
+            "type": "workspaceTrust",
+            "match": "",
+            "action": "allow",
+            "enabled": true
+        },
+        {
+            "type": "gitConfirm",
+            "match": "",
+            "action": "accept",
+            "enabled": true
+        },
+        {
+            "type": "gitConfirm",
+            "match": "",
+            "action": "allow",
+            "enabled": true
+        },
+        {
+            "type": "closeConfirm",
+            "match": "",
+            "action": "accept",
+            "enabled": true
+        },
+        {
+            "type": "closeConfirm",
+            "match": "",
+            "action": "allow",
+            "enabled": true
+        },
+        {
+            "type": "browserPermission",
+            "match": "",
+            "action": "accept",
+            "enabled": true
+        },
+        {
+            "type": "browserPermission",
+            "match": "",
+            "action": "allow",
+            "enabled": true
+        }
+    ]
+}

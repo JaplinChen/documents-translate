@@ -12,7 +12,8 @@ class TestPptxApplyBilingual(unittest.TestCase):
         presentation = Presentation()
         slide = presentation.slides.add_slide(presentation.slide_layouts[6])
         textbox = slide.shapes.add_textbox(80, 80, 300, 100)
-        textbox.text = "Alpha\nBeta"
+        # Use Chinese text to avoid being filtered by _is_technical_terms_only
+        textbox.text = "這是測試文字\n第二行內容"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             pptx_in = f"{temp_dir}/sample.pptx"
@@ -35,8 +36,8 @@ class TestPptxApplyBilingual(unittest.TestCase):
 
             self.assertIsNotNone(updated_shape)
             text = updated_shape.text
-            self.assertIn("Alpha", text)
-            self.assertIn("TR:Alpha\nBeta", text)
+            self.assertIn("這是測試文字", text)
+            self.assertIn("TR:這是測試文字\n第二行內容", text)
 
 
 if __name__ == "__main__":

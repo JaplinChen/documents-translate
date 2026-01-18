@@ -43,8 +43,7 @@
     }
 
     .modal-wide {
-        width: min(900px, 94vw);
-        max-height: 85vh;
+        @apply max-w-5xl w-[92vw];
     }
 
     .modal-header {
@@ -114,12 +113,12 @@
     }
 
     .sidebar-tabs {
-        @apply flex flex-wrap gap-1 pb-4 mb-4 border-b border-slate-200;
+        @apply grid grid-cols-2 gap-2 pb-4 mb-4 border-b border-slate-200;
     }
 
     .sidebar-tab {
-        @apply px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-all;
-        @apply bg-slate-100 text-slate-500 border border-transparent hover:bg-white hover:text-slate-700;
+        @apply flex items-center justify-center px-2 py-2 text-[11px] font-bold rounded-xl cursor-pointer transition-all;
+        @apply bg-slate-100 text-slate-500 border border-slate-200/50 hover:bg-white hover:text-slate-700 hover:shadow-sm;
     }
 
     .sidebar-tab.active {

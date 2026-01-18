@@ -30,6 +30,9 @@ def test_pptx_translate_returns_llm_mode_warning(monkeypatch):
             api_key=None,
             base_url=None,
             ollama_fast_mode=False,
+            tone=None,
+            vision_context=True,
+            smart_layout=True,
         )
     )
 

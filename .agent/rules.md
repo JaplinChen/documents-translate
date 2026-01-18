@@ -17,7 +17,10 @@
 
 - **視覺卓越**：遵循現代 Web 設計美學 (Glassmorphism, 圓角, 漸層, 微動畫)。
 - **一致性**：使用已定義的 CSS 變數與設計標記。
-- **繁體中文**：介面顯示與對話一律使用繁體中文。
+- **繁體中文 (Strict)**：
+  - 所有的交談、回覆、Thought、Implementation Plan、Task、Walkthrough 及任何 markdown 檔案，**必須全程使用繁體中文**。
+  - 專有名詞與技術術語則保持英文 (e.g., React, Python, Docker)。
+  - 此規則優於任何預設語言設定。
 
 ## 4. 自動化權限與信任 (Automated Permissions & Trust)
 

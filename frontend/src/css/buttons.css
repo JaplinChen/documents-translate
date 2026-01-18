@@ -1,9 +1,9 @@
 /* === Button Styles === */
 @layer components {
     .btn {
-        @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full font-semibold text-sm;
-        @apply border border-slate-200 bg-slate-50 text-slate-700 cursor-pointer transition-all duration-200;
-        @apply hover:bg-white hover:shadow-md hover:-translate-y-0.5 active:translate-y-0;
+        @apply inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full font-bold text-sm;
+        @apply border border-slate-300 bg-white text-slate-700 cursor-pointer transition-all duration-200;
+        @apply hover:bg-slate-50 hover:border-slate-400 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0;
         @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
     }
 
@@ -16,19 +16,23 @@
     }
 
     .btn.danger {
-        @apply bg-red-50 text-red-600 border-red-200 hover:bg-red-100;
+        @apply bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 hover:border-rose-300;
+    }
+
+    .btn.compact {
+        @apply h-8 px-3 text-xs rounded-lg;
     }
 
     .icon-btn {
-        @apply w-11 h-11 rounded-lg flex items-center justify-center;
-        @apply border border-slate-200 bg-white text-slate-500 text-lg cursor-pointer transition-all duration-200;
-        @apply hover:text-blue-600 hover:border-blue-500 hover:bg-blue-50;
+        @apply w-11 h-11 rounded-xl flex items-center justify-center;
+        @apply border border-slate-300 bg-white text-slate-600 text-lg cursor-pointer transition-all duration-200 shadow-sm;
+        @apply hover:text-blue-600 hover:border-blue-600 hover:bg-blue-50 hover:shadow-md;
     }
 
     .btn-icon-action {
-        @apply w-12 h-12 flex items-center justify-center rounded-lg text-3xl;
-        @apply border border-slate-200 bg-white text-slate-600 cursor-pointer transition-all duration-200;
-        @apply hover:bg-slate-50 hover:border-slate-300;
+        @apply w-12 h-12 flex items-center justify-center rounded-xl text-3xl;
+        @apply border border-slate-300 bg-white text-slate-700 cursor-pointer transition-all duration-200 shadow-sm;
+        @apply hover:bg-slate-50 hover:border-slate-400 hover:shadow-md;
     }
 
     .btn-icon-action.text-primary {
@@ -50,7 +54,7 @@
     }
 
     .action-btn {
-        @apply px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm cursor-pointer transition-all duration-200;
-        @apply hover:bg-slate-50 hover:border-blue-500;
+        @apply px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-800 text-sm font-bold cursor-pointer transition-all duration-200 shadow-sm;
+        @apply hover:bg-slate-50 hover:border-blue-600 hover:shadow-md;
     }
 }

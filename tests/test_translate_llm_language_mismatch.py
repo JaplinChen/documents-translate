@@ -21,6 +21,7 @@ def test_translate_blocks_raises_when_language_mismatch_persists(monkeypatch) ->
         context=None,
         preferred_terms=None,
         placeholder_tokens=None,
+        language_hint=None,
     ):
         blocks_list = list(blocks)
         return build_contract(

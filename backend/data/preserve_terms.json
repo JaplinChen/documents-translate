@@ -1,0 +1,72 @@
+[
+  {
+    "id": "4251e550-af3e-4e64-9e5a-45bca3a05f52",
+    "term": "AI",
+    "category": "專業術語",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:01:07.188666Z"
+  },
+  {
+    "id": "fb7c8486-43ea-43a0-afb6-fb7a2e824b1a",
+    "term": "SSO",
+    "category": "專業術語",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:01:14.067539Z"
+  },
+  {
+    "id": "398add79-532d-42bc-aaf2-d0027ba948f6",
+    "term": "SCIM",
+    "category": "專業術語",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:01:17.687804Z"
+  },
+  {
+    "id": "4c22831d-1f05-4a8d-ad4c-07cbc52366aa",
+    "term": "Plugin",
+    "category": "專業術語",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:01:22.236165Z"
+  },
+  {
+    "id": "d82b3f87-6451-4ee8-9482-1dd899daa99d",
+    "term": "RAG",
+    "category": "專業術語",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:01:24.331497Z"
+  },
+  {
+    "id": "2df39627-1cd6-46a1-8dbd-c00d9f20c98f",
+    "term": "SAML SSO",
+    "category": "專業術語",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:01:29.399921Z"
+  },
+  {
+    "id": "5fe83da6-09f1-4c0d-803a-56dc5d55cc22",
+    "term": "Personal Knowledge Management (PKM)",
+    "category": "專業術語",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:01:38.566548Z"
+  },
+  {
+    "id": "150ec16d-9d2b-4861-8c35-df88a1eeca81",
+    "term": "Notion",
+    "category": "產品名稱",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:02:19.683510Z"
+  },
+  {
+    "id": "8bf99d4c-f934-4879-a355-efcfe91a942c",
+    "term": "Obsidian",
+    "category": "產品名稱",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:02:24.125879Z"
+  },
+  {
+    "id": "caf16f5f-0640-4d95-9ff1-53fd8fd4f21a",
+    "term": "n8n",
+    "category": "產品名稱",
+    "case_sensitive": true,
+    "created_at": "2026-01-18T09:02:58.822468Z"
+  }
+]

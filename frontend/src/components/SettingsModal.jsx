@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import LlmTab from "./settings/LlmTab";
 import CorrectionTab from "./settings/CorrectionTab";
 import PromptTab from "./settings/PromptTab";
+import AiTab from "./settings/AiTab";
 
 const PROMPT_LABELS = {
   translate_json: "翻譯 JSON 提示",
@@ -44,6 +45,15 @@ function SettingsModal({
   setLineColor,
   lineDash,
   setLineDash,
+  llmTone,
+  setLlmTone,
+  useVisionContext,
+  setUseVisionContext,
+  useSmartLayout,
+  setUseSmartLayout,
+  onExtractGlossary,
+  busy,
+  status,
   apiBase
 }) {
   const [showKey, setShowKey] = useState(false);
@@ -132,14 +142,14 @@ function SettingsModal({
           <aside className="settings-sidebar">
             <h4 className="sidebar-title">設定</h4>
             <div className="sidebar-tabs">
-              {["llm", "correction", "prompt"].map((t) => (
+              {["llm", "ai", "correction", "prompt"].map((t) => (
                 <button
                   key={t}
                   className={`sidebar-tab ${tab === t ? "active" : ""}`}
                   type="button"
                   onClick={() => setTab(t)}
                 >
-                  {t === "llm" ? "LLM" : t === "correction" ? "校正" : "Prompt"}
+                  {t === "llm" ? "LLM" : t === "ai" ? "AI 智控" : t === "correction" ? "校正" : "Prompt"}
                 </button>
               ))}
             </div>
@@ -189,6 +199,7 @@ function SettingsModal({
             <div className="modal-header fancy">
               <div className="header-title">
                 {tab === "llm" && <h3>{currentProvider.name} 設定</h3>}
+                {tab === "ai" && <h3>AI 進階智控</h3>}
                 {tab === "correction" && <h3>校正設定</h3>}
                 {tab === "prompt" && <h3>Prompt 設定</h3>}
               </div>
@@ -227,6 +238,16 @@ function SettingsModal({
                   defaultBaseUrl={defaultBaseUrl}
                   showKey={showKey}
                   setShowKey={setShowKey}
+                />
+              )}
+              {tab === "ai" && (
+                <AiTab
+                  llmTone={llmTone} setLlmTone={setLlmTone}
+                  useVisionContext={useVisionContext} setUseVisionContext={setUseVisionContext}
+                  useSmartLayout={useSmartLayout} setUseSmartLayout={setUseSmartLayout}
+                  onExtractGlossary={onExtractGlossary}
+                  busy={busy}
+                  status={status}
                 />
               )}
               {tab === "correction" && (

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from functools import lru_cache
 from typing import Iterable
 
 import re
@@ -52,8 +53,11 @@ def _detect_zh_variant(text: str) -> str:
     return "zh-TW" if trad_score >= simp_score else "zh-CN"
 
 
+@lru_cache(maxsize=2048)
 def detect_language(text: str) -> str | None:
     """偵測文字的語言。
+
+    Uses LRU cache to avoid redundant detections for the same text.
 
     判斷順序：
     1. 越南語專屬字元（需至少 2 個特徵字元避免誤判）
@@ -78,6 +82,7 @@ def detect_language(text: str) -> str | None:
         return lang
     except LangDetectException:
         return None
+
 
 
 def detect_document_languages(blocks: Iterable[dict]) -> dict:

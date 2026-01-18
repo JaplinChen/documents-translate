@@ -71,6 +71,20 @@ async def tm_glossary_upsert(entry: GlossaryEntry) -> dict:
     return {"status": "ok"}
 
 
+@router.post("/glossary/batch")
+async def tm_glossary_batch(entries: list[GlossaryEntry]) -> dict:
+    from backend.services.translation_memory import batch_upsert_glossary
+    batch_upsert_glossary([e.model_dump() for e in entries])
+    return {"status": "ok", "count": len(entries)}
+
+
+@router.delete("/glossary/clear")
+async def tm_glossary_clear() -> dict:
+    from backend.services.translation_memory import clear_glossary
+    deleted = clear_glossary()
+    return {"deleted": deleted}
+
+
 @router.delete("/glossary")
 async def tm_glossary_delete(entry: GlossaryDelete) -> dict:
     deleted = delete_glossary(entry.id)

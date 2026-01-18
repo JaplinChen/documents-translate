@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "dialogs": [
+    {
+      "match": "",
+      "action": "accept"
+    },
+    {
+      "match": "",
+      "action": "allow"
+    }
+  ],
+  "permissions": [
+    "geolocation",
+    "notifications",
+    "camera",
+    "microphone",
+    "clipboard-read",
+    "clipboard-write"
+  ],
+  "originHint": ""
+}

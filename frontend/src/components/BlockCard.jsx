@@ -20,17 +20,21 @@ export default function BlockCard({
     const outputMode = resolveOutputMode(block);
 
     const renderCorrectionPreview = () => {
-        const sourceLines = extractLanguageLines(block.source_text, sourceLang || "auto");
-        const secondaryLines = extractLanguageLines(block.source_text, secondaryLang || "auto");
-        const sourceText = sourceLines.join("\n");
-        const secondaryText = secondaryLines.join("\n");
         const translatedText = block.translated_text || "";
-        const showTranslation = normalizeText(translatedText) && normalizeText(translatedText) !== normalizeText(secondaryText);
+
+        // Check if source already contains bilingual content (mixed languages)
+        const sourceText = block.source_text || "";
+        const hasMixedLanguages = /[a-zA-Z]/.test(sourceText) && /[\u4e00-\u9fff\u3040-\u30ff\u0e00-\u0e7f]/.test(sourceText);
+
+        // If source is already bilingual, use it directly without language extraction
+        const displaySource = hasMixedLanguages ? sourceText : extractLanguageLines(sourceText, sourceLang || "auto").join("\n");
+
+        const showTranslation = normalizeText(translatedText) && normalizeText(translatedText) !== normalizeText(displaySource);
 
         if (!showTranslation) return null;
         return (
             <>
-                <div className="correction-source">{sourceText}</div>
+                <div className="correction-source">{displaySource}</div>
                 <div
                     className="correction-editor"
                     contentEditable
@@ -49,6 +53,7 @@ export default function BlockCard({
     return (
         <div className={`block-card ${block.selected === false ? "is-muted" : ""}`}>
             <div className="block-meta">
+                <span className="block-number">#{index + 1}</span>
                 <label className="select-box">
                     <input type="checkbox" checked={block.selected !== false} onChange={(e) => onBlockSelect(index, e.target.checked)} />
                     <span>套用</span>

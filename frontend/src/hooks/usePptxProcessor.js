@@ -101,7 +101,7 @@ export function usePptxProcessor({
         }
         setBusy(true);
         const totalCount = blocks.length;
-        const chunkSize = llmProvider === "ollama" ? (llmFastMode ? 3 : 6) : totalCount;
+        const chunkSize = llmProvider === "ollama" ? (llmFastMode ? 3 : 6) : 20;
         setStatus(`翻譯中...（0/${totalCount}）`);
         try {
             let translatedCount = 0;

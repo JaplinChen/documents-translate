@@ -64,24 +64,25 @@ export function EditorPanel({
                                 onChange={(e) => setFilterSlide(e.target.value)}
                             />
                         </div>
-                        <div className="filter-actions">
-                            <button className="btn ghost" type="button" onClick={onSelectAll}>全選</button>
-                            <button className="btn ghost" type="button" onClick={onClearSelection}>清除</button>
+                        <div className="filter-actions flex gap-2 ml-auto">
+                            <button className="btn ghost compact" type="button" onClick={onSelectAll}>全選</button>
+                            <button className="btn ghost compact" type="button" onClick={onClearSelection}>清除</button>
                         </div>
                     </div>
 
                     <div className="block-list">
-                        {(filteredBlocks || []).map((block) => (
+                        {(filteredBlocks || []).map((block, index) => (
                             <BlockCard
                                 key={block._uid}
                                 block={block}
+                                index={index}
                                 mode={mode}
                                 sourceLang={sourceLang}
                                 secondaryLang={secondaryLang}
                                 extractLanguageLines={extractLanguageLines}
                                 editorRefs={editorRefs}
-                                onSelect={(checked) => onBlockSelect(block._uid, checked)}
-                                onChange={(val) => onBlockChange(block._uid, val)}
+                                onBlockSelect={(checked) => onBlockSelect(block._uid, checked)}
+                                onBlockChange={(val) => onBlockChange(block._uid, val)}
                                 onOutputModeChange={(val) => onOutputModeChange(block._uid, val)}
                                 onAddGlossary={() => onAddGlossary(block)}
                                 onAddMemory={() => onAddMemory(block)}

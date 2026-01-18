@@ -62,13 +62,17 @@ def coerce_contract(result: dict, blocks: list[dict], target_language: str) -> d
 
     if candidate_list and all(isinstance(item, dict) for item in candidate_list):
         translated_texts = []
-        for item in candidate_list:
-            translated_texts.append(
+        for i, item in enumerate(candidate_list):
+            # 優先嘗試從 LLM 響應獲取譯文，若無則嘗試原始文字
+            text = (
                 item.get("translated_text")
                 or item.get("translation")
                 or item.get("text")
-                or ""
             )
+            if not text and i < len(blocks):
+                text = blocks[i].get("source_text", "")
+            translated_texts.append(text or "")
         return build_contract(blocks, target_language, translated_texts)
 
-    return result
+    # 如果以上都失敗且我們有原始塊，至少返回結構正確的合約（譯文為空）
+    return build_contract(blocks, target_language, translated_texts=None)
