@@ -168,7 +168,7 @@ exit /b 0
 :: ========================================
 :DO_START_BACKEND
 echo [Backend] Starting...
-start "Backend" cmd /c "cd /d "%BACKEND_DIR%" && "%VENV_DIR%\Scripts\python" -m uvicorn backend.main:app --reload --port %BACKEND_PORT% --host 0.0.0.0"
+start "Backend" cmd /c "cd /d "%PROJECT_ROOT%" && "%VENV_DIR%\Scripts\python" -m uvicorn backend.main:app --reload --port %BACKEND_PORT% --host 0.0.0.0"
 goto :eof
 
 :DO_START_FRONTEND

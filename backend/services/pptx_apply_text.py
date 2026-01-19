@@ -9,15 +9,16 @@ from pptx.text.text import TextFrame
 
 
 def capture_font_spec(text_frame: TextFrame) -> dict[str, Any] | None:
+    """Legacy helper that captures font spec from the first available run."""
     for paragraph in text_frame.paragraphs:
         if paragraph.runs:
             font = paragraph.runs[0].font
             rgb = None
-            if font.color is not None:
-                try:
+            try:
+                if font.color is not None:
                     rgb = font.color.rgb
-                except AttributeError:
-                    rgb = None
+            except (AttributeError, ValueError):
+                rgb = None
             return {
                 "name": font.name,
                 "size": font.size,
@@ -52,18 +53,94 @@ def apply_font_spec(
         font.color.rgb = font_spec["color"]
 
 
-def set_text_preserve_format(text_frame: TextFrame, new_text: str) -> None:
-    font_spec = capture_font_spec(text_frame)
-    text_frame.clear()
-    lines = new_text.split("\n")
-    for index, line in enumerate(lines):
-        if index == 0:
-            paragraph = text_frame.paragraphs[0]
-        else:
-            paragraph = text_frame.add_paragraph()
-        paragraph.text = line
+def capture_full_frame_styles(text_frame: TextFrame) -> list[dict[str, Any]]:
+    """Captures detailed style info for every paragraph and its first run."""
+    styles = []
+    for p in text_frame.paragraphs:
+        p_style = {
+            "level": p.level,
+            "alignment": p.alignment,
+            "space_before": p.space_before,
+            "space_after": p.space_after,
+            "line_spacing": p.line_spacing,
+            "font": None
+        }
+        if p.runs:
+            font = p.runs[0].font
+            rgb = None
+            try:
+                if font.color is not None:
+                    rgb = font.color.rgb
+            except (AttributeError, ValueError):
+                rgb = None
+            p_style["font"] = {
+                "name": font.name,
+                "size": font.size,
+                "bold": font.bold,
+                "italic": font.italic,
+                "underline": font.underline,
+                "color": rgb,
+            }
+        styles.append(p_style)
+    return styles
+
+
+def apply_paragraph_style(paragraph, p_style: dict[str, Any]) -> None:
+    """Applies paragraph-level and font-level styles to a paragraph."""
+    try:
+        paragraph.level = p_style.get("level", 0)
+        paragraph.alignment = p_style.get("alignment")
+        if p_style.get("space_before") is not None:
+            paragraph.space_before = p_style["space_before"]
+        if p_style.get("space_after") is not None:
+            paragraph.space_after = p_style["space_after"]
+        if p_style.get("line_spacing") is not None:
+            paragraph.line_spacing = p_style["line_spacing"]
+            
+        font_spec = p_style.get("font")
         if font_spec and paragraph.runs:
             apply_font_spec(paragraph.runs[0], font_spec)
+    except Exception:
+        pass
+
+
+def set_text_preserve_format(text_frame: TextFrame, new_text: str, auto_size: bool = False) -> None:
+    try:
+        # 1. Capture original granular styles
+        para_styles = capture_full_frame_styles(text_frame)
+        
+        # 2. Clear and rebuild
+        if auto_size:
+            text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+            
+        text_frame.clear()
+        lines = new_text.split("\n")
+        
+        for index, line in enumerate(lines):
+            if index == 0:
+                paragraph = text_frame.paragraphs[0]
+            else:
+                paragraph = text_frame.add_paragraph()
+            
+            paragraph.text = line
+            
+            # 3. Apply styles from corresponding source paragraph
+            # If we have more lines than source paragraphs, use the last style
+            style_idx = min(index, len(para_styles) - 1) if para_styles else -1
+            if style_idx >= 0:
+                apply_paragraph_style(paragraph, para_styles[style_idx])
+                
+    except Exception:
+        import traceback
+        import logging
+        logging.getLogger(__name__).error(f"Error in set_text_preserve_format: {traceback.format_exc()}")
+        try:
+            if auto_size:
+                text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+            text_frame.clear()
+            text_frame.text = new_text
+        except Exception:
+            pass
 
 
 def contains_cjk(text: str) -> bool:
@@ -153,6 +230,31 @@ def set_corrected_text(text_frame: TextFrame, lines: list[str], translated_color
         return False
 
 
+def capture_paragraph_spec(text_frame: TextFrame) -> dict[str, Any] | None:
+    if not text_frame.paragraphs:
+        return None
+    p = text_frame.paragraphs[0]
+    return {
+        "alignment": p.alignment,
+        "space_before": p.space_before,
+        "space_after": p.space_after,
+        "line_spacing": p.line_spacing,
+    }
+
+
+def apply_paragraph_spec(paragraph, spec: dict[str, Any]) -> None:
+    if not spec:
+        return
+    if spec["alignment"] is not None:
+        paragraph.alignment = spec["alignment"]
+    if spec["space_before"] is not None:
+        paragraph.space_before = spec["space_before"]
+    if spec["space_after"] is not None:
+        paragraph.space_after = spec["space_after"]
+    if spec["line_spacing"] is not None:
+        paragraph.line_spacing = spec["line_spacing"]
+
+
 def set_bilingual_text(
     text_frame: TextFrame,
     source_text: str,
@@ -160,30 +262,61 @@ def set_bilingual_text(
     auto_size: bool = False,
     scale: float = 1.0,
 ) -> bool:
-    font_spec = capture_font_spec(text_frame)
     translated_color = RGBColor(0x1F, 0x77, 0xB4)
+    text_scale = 0.85
+
     try:
+        # 1. Capture granular paragraph styles
+        para_styles = capture_full_frame_styles(text_frame)
+
         if auto_size:
             text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+        
         text_frame.clear()
-        for index, line in enumerate(source_text.split("\n")):
+        
+        # Add Source Text
+        source_lines = source_text.split("\n")
+        for index, line in enumerate(source_lines):
             if index == 0:
                 paragraph = text_frame.paragraphs[0]
             else:
                 paragraph = text_frame.add_paragraph()
+            
             paragraph.text = line
-            if paragraph.runs:
-                apply_font_spec(paragraph.runs[0], font_spec or {}, None)
+            style_idx = min(index, len(para_styles) - 1) if para_styles else -1
+            if style_idx >= 0:
+                apply_paragraph_style(paragraph, para_styles[style_idx])
 
-        text_frame.add_paragraph()
+        # Add Empty Line for Separation
+        separator = text_frame.add_paragraph()
+        separator.text = " "
+        # Use first paragraph font size if available
+        base_size = 120000
+        if para_styles and para_styles[0].get("font"):
+            base_size = para_styles[0]["font"].get("size") or base_size
+        separator.font.size = int(base_size * 0.5)
 
-        for line in translated_text.split("\n"):
+        # Add Translated Text
+        translated_lines = translated_text.split("\n")
+        for index, line in enumerate(translated_lines):
             paragraph = text_frame.add_paragraph()
             paragraph.text = line
+            
+            style_idx = min(index, len(para_styles) - 1) if para_styles else -1
+            if style_idx >= 0:
+                apply_paragraph_style(paragraph, para_styles[style_idx])
+            
             if paragraph.runs:
-                apply_font_spec(paragraph.runs[0], font_spec or {}, translated_color, scale=scale)
+                # Apply special color and scaling to translated runs
+                paragraph.runs[0].font.color.rgb = translated_color
+                if paragraph.runs[0].font.size:
+                    paragraph.runs[0].font.size = int(paragraph.runs[0].font.size * text_scale)
+
         return True
     except Exception:
+        import traceback
+        import logging
+        logging.getLogger(__name__).error(f"Error in set_bilingual_text: {traceback.format_exc()}")
         return False
 
 

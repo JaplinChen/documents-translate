@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_LINE_DASH_STYLE
+from pptx.enum.text import MSO_AUTO_SIZE
 from pptx.text.text import TextFrame
 
 from backend.services.pptx_apply_layout import (
@@ -30,27 +31,36 @@ from backend.services.pptx_apply_text import (
 
 
 def _apply_translations_to_presentation(
-    presentation: Presentation, blocks: Iterable[dict], mode: str = "direct"
+    presentation: Presentation, 
+    blocks: Iterable[dict], 
+    layout: str = "auto",
+    mode: str = "direct"
 ) -> None:
     table_cell_positions: dict[tuple[int, int], list[TextFrame]] = {}
     table_cell_index: dict[tuple[int, int], int] = {}
+    supported_types = {"textbox", "table_cell", "notes"}
 
     for block in blocks:
         slide_index = block.get("slide_index")
         shape_id = block.get("shape_id")
         translated_text = block.get("translated_text", "")
         source_text = block.get("source_text", "")
+        
         if mode == "bilingual":
-            combined_text = f"{source_text}\\n\\n{translated_text}"
+            combined_text = f"{source_text}\n\n{translated_text}"
         else:
             combined_text = translated_text
+            
         block_type = block.get("block_type", "textbox")
         if slide_index is None or shape_id is None:
             continue
         if slide_index < 0 or slide_index >= len(presentation.slides):
             continue
         slide = presentation.slides[slide_index]
+        scale = estimate_scale(source_text, translated_text)
 
+        is_auto_layout = (layout in ("auto", "new_slide"))
+        
         if block_type == "notes":
             if not slide.has_notes_slide:
                 continue
@@ -58,12 +68,13 @@ def _apply_translations_to_presentation(
             if notes_shape is None or not notes_shape.has_text_frame:
                 continue
             if mode == "bilingual":
-                if not set_bilingual_text(notes_shape.text_frame, source_text, translated_text):
-                    set_text_preserve_format(notes_shape.text_frame, combined_text)
+                if not set_bilingual_text(notes_shape.text_frame, source_text, translated_text, auto_size=is_auto_layout, scale=scale):
+                    set_text_preserve_format(notes_shape.text_frame, combined_text, auto_size=is_auto_layout)
             else:
-                set_text_preserve_format(notes_shape.text_frame, combined_text)
+                set_text_preserve_format(notes_shape.text_frame, translated_text, auto_size=is_auto_layout)
             continue
 
+        # 3. Apply Text
         shape = find_shape_with_id(slide, shape_id)
         if shape is None:
             continue
@@ -79,21 +90,66 @@ def _apply_translations_to_presentation(
             cells = table_cell_positions[key]
             if idx >= len(cells):
                 continue
+            
             if mode == "bilingual":
-                if not set_bilingual_text(cells[idx], source_text, translated_text):
-                    set_text_preserve_format(cells[idx], combined_text)
+                if not set_bilingual_text(cells[idx], source_text, translated_text, auto_size=is_auto_layout, scale=scale):
+                    set_text_preserve_format(cells[idx], combined_text, auto_size=is_auto_layout)
             else:
-                set_text_preserve_format(cells[idx], combined_text)
+                set_text_preserve_format(cells[idx], translated_text, auto_size=is_auto_layout)
             table_cell_index[key] = idx + 1
             continue
 
         if not shape.has_text_frame:
             continue
+            
+        # Backup original geometry to prevent collapse
+        orig_left = shape.left
+        orig_top = shape.top
+        orig_width = shape.width
+        orig_height = shape.height
+
+        # Handle Overflow
+        # In 'direct' mode (New Page), we generally want to avoid splitting if the user wants to stay on one page.
+        # But for extremely long text, we still split.
+        overflow_limit = 1000 if layout == "new_slide" else 400
+        
+        if is_auto_layout and len(translated_text) > overflow_limit:
+            if mode == "bilingual":
+                set_text_preserve_format(shape.text_frame, source_text, auto_size=is_auto_layout)
+            else:
+                shape.text_frame.clear()
+            
+            chunks = split_text_chunks(translated_text, 300)
+            font_spec = capture_font_spec(shape.text_frame)
+            max_bottom = presentation.slide_height
+            add_overflow_textboxes(
+                slide,
+                shape,
+                chunks,
+                font_spec,
+                RGBColor(0x1F, 0x77, 0xB4),
+                max_bottom,
+            )
+            # Restore geometry even if cleared
+            shape.left, shape.top, shape.width, shape.height = orig_left, orig_top, orig_width, orig_height
+            continue
+
         if mode == "bilingual":
-            if not set_bilingual_text(shape.text_frame, source_text, translated_text):
-                set_text_preserve_format(shape.text_frame, combined_text)
+            if not set_bilingual_text(shape.text_frame, source_text, translated_text, auto_size=is_auto_layout, scale=scale):
+                set_text_preserve_format(shape.text_frame, combined_text, auto_size=is_auto_layout)
         else:
-            set_text_preserve_format(shape.text_frame, combined_text)
+            if is_auto_layout:
+                shape.text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+            set_text_preserve_format(shape.text_frame, translated_text, auto_size=is_auto_layout)
+        
+        # Restore original geometry to prevent any unintended shrinking/movement
+        try:
+            shape.left = orig_left
+            shape.top = orig_top
+            shape.width = orig_width
+            shape.height = orig_height
+        except Exception:
+            pass
 
 
 def apply_translations(
@@ -111,7 +167,9 @@ def apply_bilingual(
     table_cell_positions: dict[tuple[int, int], list[TextFrame]] = {}
     table_cell_index: dict[tuple[int, int], int] = {}
     supported_types = {"textbox", "table_cell", "notes"}
+    
     if layout == "new_slide":
+        print(f"[APPLY_BILINGUAL] Using Hybrid Duplication for new_slide mode", flush=True)
         slide_blocks: dict[int, list[dict]] = {}
         for block in blocks:
             if block.get("apply") is False or block.get("selected") is False:
@@ -120,21 +178,45 @@ def apply_bilingual(
             if slide_index is None:
                 continue
             slide_blocks.setdefault(slide_index, []).append(block)
+        
         new_blocks = []
         offset = 0
         for slide_index in range(len(presentation.slides)):
             if slide_index not in slide_blocks:
                 continue
             source_slide = presentation.slides[slide_index + offset]
-            new_slide = duplicate_slide(presentation, source_slide)
+            try:
+                res = duplicate_slide(presentation, source_slide)
+                if isinstance(res, tuple):
+                    new_slide, shape_map = res
+                else:
+                    new_slide = res
+                    shape_map = {}
+            except Exception as e:
+                print(f"[APPLY_BILINGUAL] duplicate_slide failed: {e}", flush=True)
+                new_slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+                shape_map = {}
+                
             insert_slide_after(presentation, new_slide, slide_index + offset)
             offset += 1
             new_slide_index = slide_index + offset
+            
+            print(f"[APPLY_BILINGUAL] Duplicated slide {slide_index} -> new slide at {new_slide_index}", flush=True)
+            
             for block in slide_blocks[slide_index]:
                 updated = dict(block)
                 updated["slide_index"] = new_slide_index
+                
+                # Remap shape_id if possible
+                old_sid = updated.get("shape_id")
+                if old_sid in shape_map:
+                    updated["shape_id"] = shape_map[old_sid]
+                    print(f"[APPLY_BILINGUAL] Remapped shape_id {old_sid} -> {shape_map[old_sid]}", flush=True)
+                    
                 new_blocks.append(updated)
-        _apply_translations_to_presentation(presentation, new_blocks, mode="direct")
+        
+        print(f"[APPLY_BILINGUAL] Applying translations to {len(new_blocks)} shapes in new slides with layout={layout}", flush=True)
+        _apply_translations_to_presentation(presentation, new_blocks, layout=layout, mode="direct")
         presentation.save(pptx_out)
         return
 

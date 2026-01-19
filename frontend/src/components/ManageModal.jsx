@@ -178,18 +178,24 @@ export default function ManageModal({
                                 )}
                             </div>
                             <div className="create-row">
-                                <div className="create-fields">
-                                    <select className="select-input" value={newEntry.source_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, source_lang: e.target.value }))}>
+                                <div className="create-fields grid grid-cols-12 gap-2 w-full items-center">
+                                    <select className="select-input col-span-2" value={newEntry.source_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, source_lang: e.target.value }))}>
                                         {(languageOptions || []).filter((o) => o.code !== "auto").map((o) => <option key={`src-${o.code}`} value={o.code}>{o.label}</option>)}
                                     </select>
-                                    <select className="select-input" value={newEntry.target_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_lang: e.target.value }))}>
+                                    <select className="select-input col-span-2" value={newEntry.target_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_lang: e.target.value }))}>
                                         {(languageOptions || []).filter((o) => o.code !== "auto").map((o) => <option key={`tgt-${o.code}`} value={o.code}>{o.label}</option>)}
                                     </select>
-                                    <input className="select-input" value={newEntry.source_text} placeholder="來源文字" onChange={(e) => setNewEntry((prev) => ({ ...prev, source_text: e.target.value }))} />
-                                    <input className="select-input" value={newEntry.target_text} placeholder="目標文字" onChange={(e) => setNewEntry((prev) => ({ ...prev, target_text: e.target.value }))} />
-                                    {isGlossary && <input className="select-input" type="number" value={newEntry.priority} placeholder="權重" onChange={(e) => setNewEntry((prev) => ({ ...prev, priority: e.target.value }))} />}
+                                    <input className="text-input col-span-3" value={newEntry.source_text} placeholder="來源文字" onChange={(e) => setNewEntry((prev) => ({ ...prev, source_text: e.target.value }))} />
+                                    <input className="text-input col-span-3" value={newEntry.target_text} placeholder="目標文字" onChange={(e) => setNewEntry((prev) => ({ ...prev, target_text: e.target.value }))} />
+                                    {isGlossary ? (
+                                        <>
+                                            <input className="text-input col-span-1 text-center px-1" type="number" value={newEntry.priority} placeholder="權重" onChange={(e) => setNewEntry((prev) => ({ ...prev, priority: e.target.value }))} />
+                                            <button className="btn primary col-span-1 h-9 min-h-[2.25rem] px-0 w-full flex items-center justify-center" type="button" onClick={handleCreate} title="新增">＋</button>
+                                        </>
+                                    ) : (
+                                        <button className="btn primary col-span-2 h-9 min-h-[2.25rem] w-full" type="button" onClick={handleCreate}>新增</button>
+                                    )}
                                 </div>
-                                <button className="btn primary" type="button" onClick={handleCreate}>手動新增</button>
                             </div>
                             <DataTable
                                 items={items}

@@ -166,22 +166,18 @@ async def pptx_translate_stream(
             await queue.put({"event": "progress", "data": json.dumps(progress_data)})
 
         try:
-            # Send initial progress event to switch UI status from
-            # "Preparing" to "Translating" immediately
-            await queue.put(
+            # yield initial progress event immediately to switch UI status
+            # This ensures headers are sent before any potential blocking initialization
+            initial_data = json.dumps(
                 {
-                    "event": "progress",
-                    "data": json.dumps(
-                        {
-                            "chunk_index": 0,
-                            "completed_indices": [],
-                            "chunk_size": 0,
-                            "total_pending": len(blocks_data),
-                            "timestamp": 0,
-                        }
-                    ),
+                    "chunk_index": 0,
+                    "completed_indices": [],
+                    "chunk_size": 0,
+                    "total_pending": len(blocks_data),
+                    "timestamp": 0,
                 }
             )
+            yield f"event: progress\ndata: {initial_data}\n\n"
 
             task = asyncio.create_task(
                 translate_pptx_blocks_async(
@@ -216,6 +212,11 @@ async def pptx_translate_stream(
                     get_queue_task.cancel()
 
                 if task in done:
+                    # Flush any remaining items in queue regardless of task status
+                    while not queue.empty():
+                        event = queue.get_nowait()
+                        yield f"event: {event['event']}\ndata: {event['data']}\n\n"
+                        
                     result = await task
                     yield f"event: complete\ndata: {json.dumps(result)}\n\n"
                     break

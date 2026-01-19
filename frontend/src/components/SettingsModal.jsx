@@ -208,8 +208,8 @@ function SettingsModal({
                   <>
                     <a className="text-xs text-green-600 mr-2">{promptStatus}</a>
                     <button className="btn-icon-action" type="button" onClick={handleResetPrompt} title="重置 Prompt">↺</button>
-                    <button className="btn-icon-action text-2xl" type="button" onClick={onClose} title="關閉">✕</button>
-                    <button className="btn-icon-action text-primary border-primary text-2xl" type="button" onClick={handleSavePrompt} title="儲存 Prompt">✔</button>
+                    <button className="btn-icon-action" type="button" onClick={onClose} title="關閉">✕</button>
+                    <button className="btn-icon-action text-primary border-primary" type="button" onClick={handleSavePrompt} title="儲存 Prompt">✔</button>
                   </>
                 ) : (
                   <>

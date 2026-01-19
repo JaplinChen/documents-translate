@@ -359,20 +359,21 @@
 
     /* Action Row */
     .action-row {
-        @apply flex gap-3 flex-wrap items-center py-2 mb-0;
+        @apply flex gap-3 flex-wrap items-center py-1 mb-1;
     }
 
     /* Create Row */
     .create-row {
-        @apply flex gap-4 items-end py-4 border-b border-slate-200;
+        @apply flex gap-4 items-end py-2 border-b border-slate-200;
     }
 
     .create-fields {
-        @apply flex gap-2 flex-1 flex-wrap;
+        @apply w-full;
     }
 
-    .create-fields .select-input {
-        @apply min-w-[100px] flex-1;
+    .create-fields .select-input,
+    .create-fields .text-input {
+        @apply w-full h-9 py-1 px-2 text-sm;
     }
 
     /* Token Stats Component */
