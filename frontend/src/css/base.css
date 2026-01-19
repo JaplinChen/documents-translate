@@ -1,0 +1,42 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === CSS Variables === */
+:root {
+    /* 主要強調色 */
+    --accent: #2563eb;
+    --accent-strong: #1d4ed8;
+    --accent-soft: #eff6ff;
+
+    /* 背景層次 (淡色高對比方案) */
+    --bg-main: #f4f7fb;       /* 整個頁面的淺藍灰底色 */
+    --bg-sidebar: #ebf0f6;    /* 側邊欄稍微深一點點的淡冷灰 */
+    --bg-card: #ffffff;       /* 浮動卡片必須是純白以產生最高對比 */
+
+    /* 文字層次 */
+    --text-heading: #0f172a;  /* slate-950，用於標題 */
+    --text-main: #1e293b;     /* slate-800，用於本文 */
+    --text-muted: #64748b;    /* slate-500，用於副標題與說明 */
+
+    /* 邊框層次 */
+    --border-strong: #cbd5e1; /* slate-300，確保邊界清晰 */
+    --border-soft: #e2e8f0;   /* slate-200 */
+
+    /* 校正模式顏色 */
+    --correction-fill: #fef9c3;
+    --correction-text: #b11313;
+    --correction-line: #7e22ce;
+}
+
+
+/* === Base Layer === */
+@layer base {
+    body {
+        @apply font-sans antialiased text-slate-800;
+        background-color: var(--bg-main);
+        font-family: "IBM Plex Sans", "Noto Sans TC", sans-serif;
+    }
+}

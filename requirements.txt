@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+httpx
+python-docx
+python-multipart
+python-pptx
+pydantic
+pydantic-settings
+langdetect
+ruff
+pre-commit
+pytest
+pytest-asyncio
+python-dotenv

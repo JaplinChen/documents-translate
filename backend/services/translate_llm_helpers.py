@@ -1,0 +1,218 @@
+"""Helper functions for translate_llm module.
+
+This module contains helper functions for preparing blocks
+and processing async chunks.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from collections.abc import Callable
+from typing import Any
+
+from backend.services.llm_context import build_context
+from backend.services.llm_placeholders import has_placeholder
+from backend.services.llm_utils import cache_key, tm_respects_terms
+from backend.services.translate_chunk import (
+    prepare_chunk,
+    translate_chunk_async,
+)
+from backend.services.translate_retry import apply_translation_results
+from backend.services.translation_memory import (
+    get_glossary_terms,
+    get_glossary_terms_any,
+    get_tm_terms,
+    get_tm_terms_any,
+    lookup_tm,
+)
+
+LOGGER = logging.getLogger(__name__)
+
+
+def prepare_pending_blocks(
+    blocks_list: list[dict],
+    target_language: str,
+    source_lang: str,
+    use_tm: bool,
+    use_placeholders: bool,
+    preferred_terms: list[tuple[str, str]],
+) -> tuple[list[str | None], list[tuple[int, dict]], dict[str, str]]:
+    """Prepare blocks for translation, checking cache and TM."""
+    local_cache: dict[str, str] = {}
+    translated_texts: list[str | None] = [None] * len(blocks_list)
+    pending: list[tuple[int, dict]] = []
+
+    for index, block in enumerate(blocks_list):
+        key = cache_key(block)
+        if not key:
+            translated_texts[index] = ""
+            continue
+        if key in local_cache:
+            if not use_placeholders and has_placeholder(local_cache[key]):
+                continue
+            translated_texts[index] = local_cache[key]
+            continue
+        if source_lang and source_lang != "auto" and use_tm:
+            tm_hit = lookup_tm(
+                source_lang=source_lang,
+                target_lang=target_language,
+                text=key,
+            )
+            if (
+                tm_hit is not None
+                and tm_respects_terms(key, tm_hit, preferred_terms)
+                and not (not use_placeholders and has_placeholder(tm_hit))
+            ):
+                translated_texts[index] = tm_hit
+                local_cache[key] = tm_hit
+                continue
+        pending.append((index, block))
+
+    return translated_texts, pending, local_cache
+
+
+def load_preferred_terms(
+    source_lang: str, target_language: str, use_tm: bool
+) -> list[tuple[str, str]]:
+    """Load preferred terms from glossary and TM."""
+    if source_lang and source_lang != "auto":
+        preferred_terms = get_glossary_terms(source_lang, target_language)
+        if use_tm:
+            preferred_terms.extend(get_tm_terms(source_lang, target_language))
+    else:
+        preferred_terms = get_glossary_terms_any(target_language)
+        if use_tm:
+            preferred_terms.extend(get_tm_terms_any(target_language))
+    return preferred_terms
+
+
+async def process_chunk_async(
+    translator,
+    provider,
+    chunk,
+    chunk_blocks,
+    placeholder_maps,
+    target_language,
+    context,
+    preferred_terms,
+    placeholder_tokens,
+    tone,
+    vision_context,
+    params,
+    chunk_index,
+    fallback_on_error,
+    mode,
+    translated_texts,
+    local_cache,
+    glossary,
+    use_tm,
+    on_progress: Callable[[dict], Any] | None = None,
+):
+    """Helper to process a single chunk asynchronously."""
+    chunk_started = time.perf_counter()
+
+    if params.get("chunk_delay", 0) > 0:
+        await asyncio.sleep(params["chunk_delay"] * (chunk_index - 1))
+
+    result = await translate_chunk_async(
+        translator,
+        provider,
+        chunk_blocks,
+        target_language,
+        context,
+        preferred_terms,
+        placeholder_tokens,
+        tone,
+        vision_context,
+        params,
+        chunk_index,
+        fallback_on_error,
+        mode,
+    )
+
+    apply_translation_results(
+        chunk,
+        placeholder_maps,
+        result,
+        translated_texts,
+        local_cache,
+        glossary,
+        target_language,
+        use_tm,
+    )
+
+    if on_progress:
+        completed_indices = [idx for idx, _ in chunk]
+        try:
+            val = on_progress(
+                {
+                    "chunk_index": chunk_index,
+                    "completed_indices": completed_indices,
+                    "chunk_size": len(chunk),
+                    "total_pending": len(translated_texts),
+                    "timestamp": time.time(),
+                }
+            )
+            if asyncio.iscoroutine(val):
+                await val
+        except Exception:
+            LOGGER.exception("Error in progress callback")
+
+    chunk_duration = time.perf_counter() - chunk_started
+    LOGGER.info("LLM chunk %s completed in %.2fs (async)", chunk_index, chunk_duration)
+
+
+def create_async_chunk_tasks(
+    chunk_list,
+    translator,
+    provider,
+    blocks_list,
+    target_language,
+    preferred_terms,
+    use_placeholders,
+    params,
+    fallback_on_error,
+    mode,
+    translated_texts,
+    local_cache,
+    glossary,
+    use_tm,
+    tone,
+    vision_context,
+    on_progress,
+):
+    """Create async tasks for processing chunks."""
+    tasks = []
+    for chunk_index, chunk in enumerate(chunk_list, start=1):
+        chunk_blocks, placeholder_maps, placeholder_tokens = prepare_chunk(
+            chunk, use_placeholders, preferred_terms
+        )
+        context = build_context(params["context_strategy"], blocks_list, chunk_blocks)
+
+        tasks.append(
+            process_chunk_async(
+                translator,
+                provider,
+                chunk,
+                chunk_blocks,
+                placeholder_maps,
+                target_language,
+                context,
+                preferred_terms,
+                placeholder_tokens,
+                tone,
+                vision_context,
+                params,
+                chunk_index,
+                fallback_on_error,
+                mode,
+                translated_texts,
+                local_cache,
+                glossary,
+                use_tm,
+                on_progress,
+            )
+        )
+    return tasks

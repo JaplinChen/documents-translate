@@ -1,0 +1,58 @@
+version: 1.0
+
+# 全局自動化級別
+# "collaborative" (需確認) | "autonomous" (自動執行)
+mode: autonomous
+
+permissions:
+  terminal:
+    # 將 interact_mode 從 'ask' 改為 'silent'
+    interact_mode: silent
+    # 允許自動執行指令
+    auto_execute: true
+
+    # 這些指令永遠被禁止 (Agent 嘗試執行時會直接報錯)
+    blocked_commands:
+      - "rm -rf /"
+      - "mkfs"
+      - "dd"
+      - ":(){ :|:& };:" # Fork bombs
+
+    # 這些指令雖然允許，但必須強制人類點擊確認
+    require_confirmation_regex:
+      - "^sudo"
+      - "^deploy"
+      - "^git push --force"
+      - "^terraform apply"
+      - "^kubectl apply"
+
+  filesystem:
+    # 允許自動寫入
+    auto_apply: true
+
+    # 禁止 Agent 修改或讀取的敏感文件
+    protected_patterns:
+      - ".env*"
+      - "**/*.pem"
+      - "**/*.key"
+      - ".git/config"
+      - "production.yml"
+
+    # 安全閥：若單次變更超過 300 行，強制暫停並要求審核
+    max_changes_per_step_lines: 300
+
+strategies:
+  # 錯誤處理機制
+  on_error:
+    # 若指令執行失敗，允許 Agent 重試次數
+    max_retries: 3
+    # 若測試失敗，自動回滾代碼 (需配合 Git)
+    auto_revert_on_test_failure: true
+
+  # 外部請求限制 (防止 Agent 亂發 API 請求)
+  network:
+    allow_domains:
+      - "api.github.com"
+      - "pypi.org"
+      - "npmjs.org"
+      - "localhost:*"

@@ -1,0 +1,28 @@
+/* === Responsive Styles === */
+@media (max-width: 1024px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .block-body {
+        @apply grid-cols-1;
+    }
+}
+
+@media (max-width: 768px) {
+    .app {
+        @apply p-5;
+    }
+
+    .settings-shell {
+        @apply flex-col;
+    }
+
+    .settings-sidebar {
+        @apply w-full border-r-0 border-b border-slate-200 flex-row overflow-x-auto;
+    }
+
+    .sidebar-item {
+        @apply min-w-max;
+    }
+}

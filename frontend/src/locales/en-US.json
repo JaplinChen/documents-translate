@@ -1,0 +1,298 @@
+{
+    "app": {
+        "title": "PPTX Translation Console"
+    },
+    "nav": {
+        "title": "Guide",
+        "subtitle": "Complete configuration in order",
+        "step1": "Upload File",
+        "step2": "Preferences",
+        "step3": "Translate",
+        "step4": "Download",
+        "manage": "Manage",
+        "settings": "Settings"
+    },
+    "sidebar": {
+        "mode": {
+            "label": "Mode",
+            "bilingual": "Bilingual",
+            "translated": "Translated Doc",
+            "correction": "Correction Mode",
+            "translate": "Translation Mode"
+        },
+        "layout": {
+            "label": "Layout",
+            "inline": "Inline",
+            "auto": "Auto",
+            "new_slide": "New Slide"
+        },
+        "lang": {
+            "label": "Languages"
+        },
+        "upload": {
+            "placeholder": "Select or Drop PPTX File",
+            "limit": "Supports Microsoft PowerPoint (.pptx)",
+            "ready": "✓ Ready"
+        },
+        "tm": "Use Translation Memory",
+        "preprocess": "Preprocessing",
+        "extract": {
+            "button": "📊 Extract Glossary",
+            "hint": "Analyze content to set terms for consistency",
+            "summary": "✓ Parsed {{count}} blocks"
+        },
+        "translate": {
+            "preparing": "Preparing...",
+            "translating": "Translating... ({{current}}/{{total}})",
+            "completed": "Translation Complete",
+            "button": "🚀 Start AI Translation",
+            "stop": "Stop"
+        },
+        "apply": {
+            "button": "📊 Apply Layout & Download PPTX",
+            "applying": "Applying...",
+            "completed": "File Exported"
+        },
+        "export": {
+            "others": "Other Formats"
+        },
+        "hint": {
+            "step12": "Please complete steps 1-2 first",
+            "step3": "Please complete translation first"
+        }
+    },
+    "editor": {
+        "title": "Text Blocks",
+        "summary": "Total {{total}}, Showing {{filtered}}",
+        "empty": {
+            "title": "No text blocks extracted",
+            "hint": "Please upload PPTX and click 'Analyze' first"
+        },
+        "filter": {
+            "search": "Search",
+            "type": "Type",
+            "slide": "Slide"
+        },
+        "search_placeholder": "Search source/target",
+        "filter_type": "All Types",
+        "filter_slide": "Slide {{index}}",
+        "select_all": "Select All",
+        "clear_selection": "Clear",
+        "source_label": "Source",
+        "translate_label": "Target"
+    },
+    "components": {
+        "quality_badge": {
+            "score_label": "Quality Score",
+            "excellent": "Excellent",
+            "good": "Good",
+            "fair": "Fair",
+            "poor": "Needs Improvement",
+            "review": "Needs Review"
+        },
+        "editor": {
+            "filter_textbox": "Textbox",
+            "filter_table": "Table Cell",
+            "filter_notes": "Speaker Notes"
+        },
+        "token_stats": {
+            "title": "Token Usage Stats",
+            "session_title": "Current Session (24h)",
+            "input_tokens": "Input Tokens",
+            "output_tokens": "Output Tokens",
+            "total_tokens": "Total Tokens",
+            "estimated_cost": "Estimated Cost",
+            "request_count": "Request Count",
+            "all_time_title": "All-time Stats",
+            "models_used": "Models Used"
+        },
+        "block_card": {
+            "apply": "Apply",
+            "slide": "Slide",
+            "shape": "Shape",
+            "translating": "Translating...",
+            "updated_at": "Updated {{time}}",
+            "glossary": "Terms",
+            "memory": "TM",
+            "source": "Source",
+            "target": "Translation / Correction",
+            "output": "Output",
+            "placeholder": "Enter translation or correction text",
+            "tools_glossary_title": "Add to Glossary",
+            "tools_memory_title": "Add to Translation Memory"
+        }
+    },
+    "settings": {
+        "providers": {
+            "ollama": "Local Model (Ollama)",
+            "gemini": "Gemini (Google)",
+            "chatgpt": "Standard API (OpenAI/Compatible)"
+        },
+        "title": "Settings",
+        "tabs": {
+            "llm": "LLM",
+            "ai": "AI Control",
+            "correction": "Correction",
+            "prompt": "Prompt"
+        },
+        "prompt": {
+            "empty": "No Prompts",
+            "reset": "Reset Prompt",
+            "save": "Save Prompt",
+            "close": "Close",
+            "select_prompt": "Select Prompt",
+            "prompt_placeholder": "Enter Prompt Content",
+            "loading": "Loading..."
+        },
+        "prompt_labels": {
+            "translate_json": "Translate JSON Prompt",
+            "system_message": "System Message",
+            "ollama_batch": "Ollama Batch Prompt"
+        },
+        "status": {
+            "saving": "Saving...",
+            "saved": "Saved",
+            "failed": "Save Failed"
+        },
+        "ai": {
+            "tone_title": "Translation Style & Tone",
+            "tone_label": "Target Tone",
+            "tone_options": {
+                "professional": "Professional (Default)",
+                "concise": "Concise",
+                "pm": "Product Manager (PM)",
+                "humorous": "Humorous",
+                "creative": "Creative",
+                "academic": "Academic"
+            },
+            "tone_hint": "Significantly affects word choice and sentence length.",
+            "context_title": "AI Enhancements",
+            "vision": "Vision Context",
+            "vision_hint": "Analyzes slide images and layout for better context (if supported).",
+            "layout": "Smart Layout Adjust",
+            "layout_hint": "Detects overflow and suggests font resizing or line breaks."
+        },
+        "correction": {
+            "preview": "Live Preview",
+            "preview_content": "Preview Content / Text",
+            "fill_color": "Fill Color",
+            "text_color": "Text Color",
+            "border_color": "Border Color",
+            "border_style": "Border Style",
+            "dash": "Dash",
+            "dot": "Dot",
+            "dashdot": "Dash-Dot",
+            "solid": "Solid"
+        },
+        "llm": {
+            "api_key": "API Key",
+            "api_key_placeholder": "Enter API Key",
+            "api_key_hint": "Enter the API Key for the provider.",
+            "base_url": "Base URL",
+            "base_url_hint": "Localhost default: {{url}}",
+            "fast_mode": "Ollama Fast Mode",
+            "fast_mode_label": "Small batch, disable single request",
+            "model": "Model",
+            "refresh": "Refresh",
+            "select_model": "Select Model",
+            "custom_model": "Custom Model",
+            "add": "Add",
+            "detect_hint": "Please detect model first"
+        },
+        "global_status": {
+            "idle": "Idle",
+            "processing": "Processing",
+            "completed": "Completed",
+            "error": "Error"
+        }
+    },
+    "manage": {
+        "title": "Data Management",
+        "tabs": {
+            "glossary": "Glossary",
+            "preserve": "Preserved Terms",
+            "tm": "Translation Memory"
+        },
+        "actions": {
+            "seed": "Import Demo Data",
+            "export_csv": "Export CSV",
+            "import_csv": "Import CSV",
+            "clear_all": "Clear All",
+            "add": "Add",
+            "edit": "Edit",
+            "delete": "Delete",
+            "save": "Save",
+            "cancel": "Cancel",
+            "convert_preserve": "To Preserved",
+            "convert_glossary": "To Glossary"
+        },
+        "fields": {
+            "source_text": "Source Text",
+            "target_text": "Target Text",
+            "priority": "Priority"
+        },
+        "table": {
+            "source_lang": "Source Lang",
+            "target_lang": "Target Lang",
+            "source": "Source",
+            "target": "Target",
+            "priority": "Priority",
+            "actions": "Actions"
+        },
+        "confirm": {
+            "delete": "Are you sure you want to delete this item?"
+        },
+        "empty": "No Data",
+        "preserve": {
+            "search_placeholder": "Search terms...",
+            "category_all": "All Categories",
+            "export_csv": "Export CSV",
+            "import_csv": "Import CSV",
+            "term_placeholder": "Term name (e.g. Notion)",
+            "add": "+ Add",
+            "loading": "Loading...",
+            "no_results": "No matching terms found",
+            "empty": "No items yet, please add one",
+            "table": {
+                "term": "Term",
+                "category": "Category",
+                "case": "Case Sensitive",
+                "date": "Created Date",
+                "actions": "Actions",
+                "yes": "Yes",
+                "no": "No"
+            },
+            "categories": {
+                "product": "Product Name",
+                "abbr": "Technical Abbr",
+                "special": "Terminology",
+                "other": "Other",
+                "trans": "Translation Term"
+            },
+            "case_sensitive": "Case Sensitive",
+            "alerts": {
+                "add_fail": "Add failed",
+                "delete_confirm": "Are you sure you want to delete this term?",
+                "delete_fail": "Delete failed",
+                "update_fail": "Update failed",
+                "export_fail": "Export failed",
+                "import_success": "Import success: {{imported}} rows, Skipped: {{skipped}} rows",
+                "import_fail": "Import failed"
+            }
+        }
+    },
+    "status": {
+        "extracting": "Extracting...",
+        "error": "Error: {{message}}",
+        "no_file": "Please select a file first",
+        "format_error": "Only .pptx currently supported",
+        "no_blocks": "No blocks extracted",
+        "api_key_missing": "Missing API Key in settings",
+        "interrupted": "Connection interrupted",
+        "extract_failed": "Extraction failed",
+        "translate_failed": "Translation failed",
+        "apply_failed": "Export failed",
+        "server_error": "Server connection error",
+        "server_timeout": "Server timeout"
+    }
+}
