@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pptx.dml.color import RGBColor
@@ -7,50 +8,24 @@ from pptx.enum.dml import MSO_LINE_DASH_STYLE
 from pptx.enum.text import MSO_AUTO_SIZE
 from pptx.text.text import TextFrame
 
-
-def capture_font_spec(text_frame: TextFrame) -> dict[str, Any] | None:
-    """Legacy helper that captures font spec from the first available run."""
-    for paragraph in text_frame.paragraphs:
-        if paragraph.runs:
-            font = paragraph.runs[0].font
-            rgb = None
-            try:
-                if font.color is not None:
-                    rgb = font.color.rgb
-            except (AttributeError, ValueError):
-                rgb = None
-            return {
-                "name": font.name,
-                "size": font.size,
-                "bold": font.bold,
-                "italic": font.italic,
-                "underline": font.underline,
-                "color": rgb,
-            }
-    return None
+from backend.services.font_manager import clone_font_props, contains_cjk
+from backend.services.pptx_xml_core import get_pptx_theme_summary
 
 
-def apply_font_spec(
-    run,
-    font_spec: dict[str, Any],
-    color_override: RGBColor | None = None,
-    scale: float = 1.0,
-) -> None:
-    font = run.font
-    if font_spec.get("name") is not None:
-        font.name = font_spec["name"]
-    if font_spec.get("size") is not None:
-        font.size = int(font_spec["size"] * scale)
-    if font_spec.get("bold") is not None:
-        font.bold = font_spec["bold"]
-    if font_spec.get("italic") is not None:
-        font.italic = font_spec["italic"]
-    if font_spec.get("underline") is not None:
-        font.underline = font_spec["underline"]
-    if color_override is not None:
-        font.color.rgb = color_override
-    elif font_spec.get("color") is not None:
-        font.color.rgb = font_spec["color"]
+# Pre-compile Regex for CJK Kinsoku optimization
+# Match CJK char, space, CJK char -> remove space
+CJK_SPACE_PATTERN = re.compile(
+    r'([\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f])\s+([\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f])'
+)
+
+# Remove characters that are invalid in XML 1.0 to avoid python-pptx text failures.
+INVALID_XML_CHARS = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
+
+
+def sanitize_xml_text(text: str) -> str:
+    if not text:
+        return text
+    return INVALID_XML_CHARS.sub("", text)
 
 
 def capture_full_frame_styles(text_frame: TextFrame) -> list[dict[str, Any]]:
@@ -63,30 +38,20 @@ def capture_full_frame_styles(text_frame: TextFrame) -> list[dict[str, Any]]:
             "space_before": p.space_before,
             "space_after": p.space_after,
             "line_spacing": p.line_spacing,
-            "font": None
+            "font_obj": p.runs[0].font if p.runs else None
         }
-        if p.runs:
-            font = p.runs[0].font
-            rgb = None
-            try:
-                if font.color is not None:
-                    rgb = font.color.rgb
-            except (AttributeError, ValueError):
-                rgb = None
-            p_style["font"] = {
-                "name": font.name,
-                "size": font.size,
-                "bold": font.bold,
-                "italic": font.italic,
-                "underline": font.underline,
-                "color": rgb,
-            }
         styles.append(p_style)
     return styles
 
 
-def apply_paragraph_style(paragraph, p_style: dict[str, Any]) -> None:
-    """Applies paragraph-level and font-level styles to a paragraph."""
+def apply_paragraph_style(
+    paragraph, 
+    p_style: dict[str, Any], 
+    scale: float = 1.0, 
+    target_language: str | None = None,
+    font_mapping: dict[str, list[str]] | None = None
+) -> None:
+    """Applies paragraph-level settings and clones font from font_obj."""
     try:
         paragraph.level = p_style.get("level", 0)
         paragraph.alignment = p_style.get("alignment")
@@ -97,19 +62,54 @@ def apply_paragraph_style(paragraph, p_style: dict[str, Any]) -> None:
         if p_style.get("line_spacing") is not None:
             paragraph.line_spacing = p_style["line_spacing"]
             
-        font_spec = p_style.get("font")
-        if font_spec and paragraph.runs:
-            apply_font_spec(paragraph.runs[0], font_spec)
+        source_font = p_style.get("font_obj")
+        if source_font and paragraph.runs:
+            clone_font_props(source_font, paragraph.runs[0].font, target_language=target_language, font_mapping=font_mapping)
+            if scale != 1.0 and paragraph.runs[0].font.size:
+                paragraph.runs[0].font.size = int(paragraph.runs[0].font.size * scale)
     except Exception:
         pass
 
 
-def set_text_preserve_format(text_frame: TextFrame, new_text: str, auto_size: bool = False) -> None:
+def apply_shape_highlight(
+    shape: Any,
+    fill_color: RGBColor | None = None,
+    line_color: RGBColor | None = None,
+    dash_style: MSO_LINE_DASH_STYLE | None = None,
+) -> None:
+    """Apply highlighting styles to a shape.
+    
+    Args:
+        shape: The shape object to modify.
+        fill_color: Optional fill color (RGBColor).
+        line_color: Optional line color (RGBColor).
+        dash_style: Optional line dash style (MSO_LINE_DASH_STYLE).
+    """
+    if fill_color:
+        try:
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = fill_color
+        except Exception:
+            pass  # Some shapes might not support fill
+
+    if line_color:
+        try:
+            shape.line.color.rgb = line_color
+        except Exception:
+            pass
+
+    if dash_style:
+        try:
+            shape.line.dash_style = dash_style
+        except Exception:
+            pass
+
+
+def set_text_preserve_format(text_frame: TextFrame, new_text: str, auto_size: bool = False, scale: float = 1.0) -> None:
     try:
-        # 1. Capture original granular styles
+        new_text = sanitize_xml_text(new_text)
         para_styles = capture_full_frame_styles(text_frame)
         
-        # 2. Clear and rebuild
         if auto_size:
             text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
             
@@ -123,17 +123,11 @@ def set_text_preserve_format(text_frame: TextFrame, new_text: str, auto_size: bo
                 paragraph = text_frame.add_paragraph()
             
             paragraph.text = line
-            
-            # 3. Apply styles from corresponding source paragraph
-            # If we have more lines than source paragraphs, use the last style
             style_idx = min(index, len(para_styles) - 1) if para_styles else -1
             if style_idx >= 0:
-                apply_paragraph_style(paragraph, para_styles[style_idx])
+                apply_paragraph_style(paragraph, para_styles[style_idx], scale=scale)
                 
     except Exception:
-        import traceback
-        import logging
-        logging.getLogger(__name__).error(f"Error in set_text_preserve_format: {traceback.format_exc()}")
         try:
             if auto_size:
                 text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
@@ -141,14 +135,6 @@ def set_text_preserve_format(text_frame: TextFrame, new_text: str, auto_size: bo
             text_frame.text = new_text
         except Exception:
             pass
-
-
-def contains_cjk(text: str) -> bool:
-    for char in text:
-        code = ord(char)
-        if 0x4E00 <= code <= 0x9FFF or 0x3400 <= code <= 0x4DBF:
-            return True
-    return False
 
 
 def parse_hex_color(value: str | None, default: RGBColor) -> RGBColor:
@@ -161,6 +147,7 @@ def parse_hex_color(value: str | None, default: RGBColor) -> RGBColor:
         return RGBColor.from_string(cleaned.upper())
     except ValueError:
         return default
+    return default
 
 
 def parse_dash_style(value: str | None) -> MSO_LINE_DASH_STYLE | None:
@@ -176,6 +163,15 @@ def parse_dash_style(value: str | None) -> MSO_LINE_DASH_STYLE | None:
     return mapping.get(normalized)
 
 
+def apply_cjk_line_breaking(text: str) -> str:
+    """Simple implementation of Kinsoku Shori using compiled regex."""
+    if not contains_cjk(text):
+        return text
+    
+    # Use pre-compiled regex to remove spaces between CJK characters
+    return CJK_SPACE_PATTERN.sub(r'\1\2', text)
+
+
 def build_corrected_lines(source_text: str, translated_text: str) -> list[str]:
     source_lines = source_text.split("\n")
     non_cjk_lines = []
@@ -188,71 +184,16 @@ def build_corrected_lines(source_text: str, translated_text: str) -> list[str]:
         non_cjk_lines.append(line)
     while non_cjk_lines and non_cjk_lines[-1] == "":
         non_cjk_lines.pop()
-    translated_lines = translated_text.split("\n") if translated_text else []
+    translated_lines = translated_text.split("\n") if translated_text else []  
+    
+    # optimize usage of apply_cjk_line_breaking
+    optimized_lines = []
+    for line in translated_lines:
+        optimized_lines.append(apply_cjk_line_breaking(line))
+        
     if non_cjk_lines:
-        return non_cjk_lines + [""] + translated_lines
-    return translated_lines
-
-
-def apply_shape_highlight(
-    shape, fill_color: RGBColor, line_color: RGBColor, dash_style: MSO_LINE_DASH_STYLE | None
-) -> None:
-    try:
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = fill_color
-    except Exception:
-        pass
-    try:
-        shape.line.color.rgb = line_color
-        if dash_style is not None:
-            shape.line.dash_style = dash_style
-    except Exception:
-        pass
-
-
-def set_corrected_text(text_frame: TextFrame, lines: list[str], translated_color: RGBColor) -> bool:
-    font_spec = capture_font_spec(text_frame)
-    try:
-        text_frame.clear()
-        for index, line in enumerate(lines):
-            if index == 0:
-                paragraph = text_frame.paragraphs[0]
-            else:
-                paragraph = text_frame.add_paragraph()
-            paragraph.text = line
-            if paragraph.runs:
-                if line and contains_cjk(line):
-                    apply_font_spec(paragraph.runs[0], font_spec or {}, translated_color)
-                else:
-                    apply_font_spec(paragraph.runs[0], font_spec or {}, None)
-        return True
-    except Exception:
-        return False
-
-
-def capture_paragraph_spec(text_frame: TextFrame) -> dict[str, Any] | None:
-    if not text_frame.paragraphs:
-        return None
-    p = text_frame.paragraphs[0]
-    return {
-        "alignment": p.alignment,
-        "space_before": p.space_before,
-        "space_after": p.space_after,
-        "line_spacing": p.line_spacing,
-    }
-
-
-def apply_paragraph_spec(paragraph, spec: dict[str, Any]) -> None:
-    if not spec:
-        return
-    if spec["alignment"] is not None:
-        paragraph.alignment = spec["alignment"]
-    if spec["space_before"] is not None:
-        paragraph.space_before = spec["space_before"]
-    if spec["space_after"] is not None:
-        paragraph.space_after = spec["space_after"]
-    if spec["line_spacing"] is not None:
-        paragraph.line_spacing = spec["line_spacing"]
+        return non_cjk_lines + [""] + optimized_lines
+    return optimized_lines
 
 
 def set_bilingual_text(
@@ -261,12 +202,26 @@ def set_bilingual_text(
     translated_text: str,
     auto_size: bool = False,
     scale: float = 1.0,
+    theme_data: dict[str, Any] | None = None,
+    target_language: str | None = None,
+    font_mapping: dict[str, list[str]] | None = None,
 ) -> bool:
+    # Default to a nice blue if theme color accent1 is not available
     translated_color = RGBColor(0x1F, 0x77, 0xB4)
-    text_scale = 0.85
+    source_text = sanitize_xml_text(source_text)
+    translated_text = sanitize_xml_text(translated_text)
+    if theme_data and 'colors' in theme_data:
+        accent1 = theme_data['colors'].get('accent1')
+        if accent1:
+            try:
+                translated_color = RGBColor.from_string(accent1)
+            except Exception:
+                pass
+    
+    text_scale = scale  # Use the calculated scale
 
     try:
-        # 1. Capture granular paragraph styles
+        # 1. Capture original paragraph styles (including font objects)
         para_styles = capture_full_frame_styles(text_frame)
 
         if auto_size:
@@ -285,47 +240,44 @@ def set_bilingual_text(
             paragraph.text = line
             style_idx = min(index, len(para_styles) - 1) if para_styles else -1
             if style_idx >= 0:
-                apply_paragraph_style(paragraph, para_styles[style_idx])
+                # 2026/01/20: Apply scaling to source text too, to prevent bilingual overflow
+                apply_paragraph_style(paragraph, para_styles[style_idx], scale=text_scale)
 
         # Add Empty Line for Separation
         separator = text_frame.add_paragraph()
         separator.text = " "
-        # Use first paragraph font size if available
         base_size = 120000
-        if para_styles and para_styles[0].get("font"):
-            base_size = para_styles[0]["font"].get("size") or base_size
+        if para_styles and para_styles[0].get("font_obj"):
+            base_size = para_styles[0]["font_obj"].size or base_size
         separator.font.size = int(base_size * 0.5)
 
         # Add Translated Text
         translated_lines = translated_text.split("\n")
+        
+        # Apply CJK optimization
+        translated_lines = [apply_cjk_line_breaking(line) for line in translated_lines]
+        
         for index, line in enumerate(translated_lines):
             paragraph = text_frame.add_paragraph()
             paragraph.text = line
             
             style_idx = min(index, len(para_styles) - 1) if para_styles else -1
             if style_idx >= 0:
-                apply_paragraph_style(paragraph, para_styles[style_idx])
+                # Apply base style and then override color
+                apply_paragraph_style(
+                   paragraph, 
+                   para_styles[style_idx], 
+                   scale=text_scale, 
+                   target_language=target_language,
+                   font_mapping=font_mapping
+                )
             
             if paragraph.runs:
-                # Apply special color and scaling to translated runs
                 paragraph.runs[0].font.color.rgb = translated_color
-                if paragraph.runs[0].font.size:
-                    paragraph.runs[0].font.size = int(paragraph.runs[0].font.size * text_scale)
 
         return True
     except Exception:
-        import traceback
-        import logging
-        logging.getLogger(__name__).error(f"Error in set_bilingual_text: {traceback.format_exc()}")
         return False
-
-
-def estimate_scale(source_text: str, translated_text: str) -> float:
-    source_len = max(len(source_text.strip()), 1)
-    target_len = max(len(translated_text.strip()), 1)
-    ratio = source_len / target_len
-    scale = ratio**0.5
-    return max(0.6, min(1.0, scale))
 
 
 def split_text_chunks(text: str, chunk_size: int) -> list[str]:
@@ -345,3 +297,38 @@ def split_text_chunks(text: str, chunk_size: int) -> list[str]:
     if current:
         chunks.append("\n".join(current))
     return chunks
+
+
+def set_corrected_text(
+    text_frame: TextFrame, 
+    lines: list[str], 
+    color: RGBColor | None = None
+) -> bool:
+    try:
+        lines = [sanitize_xml_text(line) for line in lines]
+        para_styles = capture_full_frame_styles(text_frame)
+        text_frame.clear()
+        
+        for index, line in enumerate(lines):
+            if index == 0:
+                paragraph = text_frame.paragraphs[0]
+            else:
+                paragraph = text_frame.add_paragraph()
+            
+            paragraph.text = line
+            
+            # Apply original style
+            style_idx = min(index, len(para_styles) - 1) if para_styles else -1
+            if style_idx >= 0:
+                apply_paragraph_style(paragraph, para_styles[style_idx])
+            
+            # Apply color override
+            if color and paragraph.runs:
+                for run in paragraph.runs:
+                    try:
+                        run.font.color.rgb = color
+                    except Exception:
+                        pass
+        return True
+    except Exception:
+        return False
