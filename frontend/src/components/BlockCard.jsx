@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { resolveOutputMode, extractLanguageLines, normalizeText } from "../utils";
 
 /**
@@ -17,6 +18,7 @@ export default function BlockCard({
     onAddGlossary,
     onAddMemory
 }) {
+    const { t } = useTranslation();
     const outputMode = resolveOutputMode(block);
 
     const renderCorrectionPreview = () => {
@@ -56,34 +58,34 @@ export default function BlockCard({
                 <span className="block-number">#{index + 1}</span>
                 <label className="select-box">
                     <input type="checkbox" checked={block.selected !== false} onChange={(e) => onBlockSelect(index, e.target.checked)} />
-                    <span>套用</span>
+                    <span>{t("components.block_card.apply")}</span>
                 </label>
-                <span>Slide {block.slide_index}</span>
-                <span>Shape {block.shape_id}</span>
+                <span>{t("components.block_card.slide")} {block.slide_index}</span>
+                <span>{t("components.block_card.shape")} {block.shape_id}</span>
                 <span className="pill">{block.block_type}</span>
                 {block.isTranslating ? (
-                    <span className="status-pill is-running">正在翻譯</span>
+                    <span className="status-pill is-running">{t("components.block_card.translating")}</span>
                 ) : block.updatedAt ? (
-                    <span className="status-pill">更新 {block.updatedAt}</span>
+                    <span className="status-pill">{t("components.block_card.updated_at", { time: block.updatedAt })}</span>
                 ) : null}
 
                 <div className="block-meta-tools ml-auto flex gap-1">
-                    <button className="btn-tool" type="button" onClick={() => onAddGlossary(block)} title="加入術語庫">
-                        <span className="icon">📖</span> 術語
+                    <button className="btn-tool" type="button" onClick={() => onAddGlossary(block)} title={t("components.block_card.tools_glossary_title")}>
+                        <span className="icon">📖</span> {t("components.block_card.glossary")}
                     </button>
-                    <button className="btn-tool" type="button" onClick={() => onAddMemory(block)} title="加入翻譯記憶">
-                        <span className="icon">🧠</span> 記憶
+                    <button className="btn-tool" type="button" onClick={() => onAddMemory(block)} title={t("components.block_card.tools_memory_title")}>
+                        <span className="icon">🧠</span> {t("components.block_card.memory")}
                     </button>
                 </div>
             </div>
             <div className="block-body">
                 <div>
                     <div className="field-label-row">
-                        <span className="field-label">原文</span>
+                        <span className="field-label">{t("components.block_card.source")}</span>
                         {mode === "correction" && (
                             <label className="toggle-check">
                                 <input type="checkbox" checked={outputMode === "source"} onChange={() => onOutputModeChange(index, "source")} />
-                                <span>輸出</span>
+                                <span>{t("components.block_card.output")}</span>
                             </label>
                         )}
                     </div>
@@ -91,11 +93,11 @@ export default function BlockCard({
                 </div>
                 <div>
                     <div className="field-label-row">
-                        <span className="field-label">翻譯 / 校正</span>
+                        <span className="field-label">{t("components.block_card.target")}</span>
                         {mode === "correction" && (
                             <label className="toggle-check">
                                 <input type="checkbox" checked={outputMode === "translated"} onChange={() => onOutputModeChange(index, "translated")} />
-                                <span>輸出</span>
+                                <span>{t("components.block_card.output")}</span>
                             </label>
                         )}
                     </div>
@@ -108,7 +110,7 @@ export default function BlockCard({
                             className="textarea"
                             value={block.translated_text || ""}
                             onChange={(e) => onBlockChange(index, e.target.value)}
-                            placeholder="輸入翻譯內容或校正文字"
+                            placeholder={t("components.block_card.placeholder")}
                         />
                     )}
                 </div>

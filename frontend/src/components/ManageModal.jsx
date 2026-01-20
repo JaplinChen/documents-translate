@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useDraggableModal } from "../hooks/useDraggableModal";
 import { API_BASE } from "../constants";
 import PreserveTermsTab from "./manage/PreserveTermsTab";
@@ -25,6 +26,7 @@ export default function ManageModal({
     onConvertToGlossary,
     onConvertToPreserveTerm
 }) {
+    const { t } = useTranslation();
     const [editingKey, setEditingKey] = useState(null);
     const [editingOriginal, setEditingOriginal] = useState(null);
     const [draft, setDraft] = useState(null);
@@ -93,7 +95,7 @@ export default function ManageModal({
     };
 
     const handleDelete = async (item) => {
-        if (!window.confirm("確定要刪除這筆資料嗎？")) return;
+        if (!window.confirm(t("manage.confirm.delete"))) return;
         if (!item.id) return;
         const payload = { id: item.id };
         if (isGlossary) await onDeleteGlossary(payload);
@@ -142,13 +144,13 @@ export default function ManageModal({
         <div className="modal-backdrop">
             <div className="modal is-draggable" ref={modalRef} style={{ top: position.top, left: position.left }}>
                 <div className="modal-header draggable-handle" onMouseDown={onMouseDown}>
-                    <h3>資料管理</h3>
-                    <button className="icon-btn ghost" type="button" onClick={onClose}>×</button>
+                    <h3>{t("manage.title")}</h3>
+                    <button className="icon-btn ghost !rounded-md" type="button" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-tabs">
-                    <button className={`tab-btn ${tab === "glossary" ? "is-active" : ""}`} type="button" onClick={() => setTab("glossary")}>翻譯對照表</button>
-                    <button className={`tab-btn ${tab === "preserve" ? "is-active" : ""}`} type="button" onClick={() => setTab("preserve")}>保留術語</button>
-                    <button className={`tab-btn ${tab === "tm" ? "is-active" : ""}`} type="button" onClick={() => setTab("tm")}>翻譯記憶</button>
+                    <button className={`tab-btn ${tab === "glossary" ? "is-active" : ""}`} type="button" onClick={() => setTab("glossary")}>{t("manage.tabs.glossary")}</button>
+                    <button className={`tab-btn ${tab === "preserve" ? "is-active" : ""}`} type="button" onClick={() => setTab("preserve")}>{t("manage.tabs.preserve")}</button>
+                    <button className={`tab-btn ${tab === "tm" ? "is-active" : ""}`} type="button" onClick={() => setTab("tm")}>{t("manage.tabs.tm")}</button>
                 </div>
                 <div className="modal-body">
                     {tab === "preserve" ? (
@@ -156,24 +158,24 @@ export default function ManageModal({
                     ) : (
                         <>
                             <div className="action-row">
-                                <button className="btn ghost" type="button" onClick={onSeed}>匯入示範資料</button>
+                                <button className="btn ghost" type="button" onClick={onSeed}>{t("manage.actions.seed")}</button>
                                 {tab === "glossary" ? (
                                     <>
-                                        <button className="btn ghost" type="button" onClick={() => handleExport(`${API_BASE}/api/tm/glossary/export`)}>匯出 CSV</button>
+                                        <button className="btn ghost" type="button" onClick={() => handleExport(`${API_BASE}/api/tm/glossary/export`)}>{t("manage.actions.export_csv")}</button>
                                         <label className="btn ghost">
-                                            匯入 CSV
+                                            {t("manage.actions.import_csv")}
                                             <input type="file" accept=".csv" className="hidden-input" onChange={(event) => handleImport(event, `${API_BASE}/api/tm/glossary/import`, onSeed)} />
                                         </label>
-                                        <button className="btn danger" type="button" onClick={onClearGlossary}>全部清除</button>
+                                        <button className="btn danger" type="button" onClick={onClearGlossary}>{t("manage.actions.clear_all")}</button>
                                     </>
                                 ) : (
                                     <>
-                                        <button className="btn ghost" type="button" onClick={() => handleExport(`${API_BASE}/api/tm/memory/export`)}>匯出 CSV</button>
+                                        <button className="btn ghost" type="button" onClick={() => handleExport(`${API_BASE}/api/tm/memory/export`)}>{t("manage.actions.export_csv")}</button>
                                         <label className="btn ghost">
-                                            匯入 CSV
+                                            {t("manage.actions.import_csv")}
                                             <input type="file" accept=".csv" className="hidden-input" onChange={(event) => handleImport(event, `${API_BASE}/api/tm/memory/import`, onSeed)} />
                                         </label>
-                                        <button className="btn danger" type="button" onClick={onClearMemory}>全部清除</button>
+                                        <button className="btn danger" type="button" onClick={onClearMemory}>{t("manage.actions.clear_all")}</button>
                                     </>
                                 )}
                             </div>
@@ -185,15 +187,15 @@ export default function ManageModal({
                                     <select className="select-input col-span-2" value={newEntry.target_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_lang: e.target.value }))}>
                                         {(languageOptions || []).filter((o) => o.code !== "auto").map((o) => <option key={`tgt-${o.code}`} value={o.code}>{o.label}</option>)}
                                     </select>
-                                    <input className="text-input col-span-3" value={newEntry.source_text} placeholder="來源文字" onChange={(e) => setNewEntry((prev) => ({ ...prev, source_text: e.target.value }))} />
-                                    <input className="text-input col-span-3" value={newEntry.target_text} placeholder="目標文字" onChange={(e) => setNewEntry((prev) => ({ ...prev, target_text: e.target.value }))} />
+                                    <input className="text-input col-span-3" value={newEntry.source_text} placeholder={t("manage.fields.source_text")} onChange={(e) => setNewEntry((prev) => ({ ...prev, source_text: e.target.value }))} />
+                                    <input className="text-input col-span-3" value={newEntry.target_text} placeholder={t("manage.fields.target_text")} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_text: e.target.value }))} />
                                     {isGlossary ? (
                                         <>
-                                            <input className="text-input col-span-1 text-center px-1" type="number" value={newEntry.priority} placeholder="權重" onChange={(e) => setNewEntry((prev) => ({ ...prev, priority: e.target.value }))} />
-                                            <button className="btn primary col-span-1 h-9 min-h-[2.25rem] px-0 w-full flex items-center justify-center" type="button" onClick={handleCreate} title="新增">＋</button>
+                                            <input className="text-input col-span-1 text-center px-1" type="number" value={newEntry.priority} placeholder={t("manage.fields.priority")} onChange={(e) => setNewEntry((prev) => ({ ...prev, priority: e.target.value }))} />
+                                            <button className="btn primary col-span-1 h-9 min-h-[2.25rem] px-0 w-full flex items-center justify-center" type="button" onClick={handleCreate} title={t("manage.actions.add")}>＋</button>
                                         </>
                                     ) : (
-                                        <button className="btn primary col-span-2 h-9 min-h-[2.25rem] w-full" type="button" onClick={handleCreate}>新增</button>
+                                        <button className="btn primary col-span-2 h-9 min-h-[2.25rem] w-full" type="button" onClick={handleCreate}>{t("manage.actions.add")}</button>
                                     )}
                                 </div>
                             </div>
@@ -211,6 +213,7 @@ export default function ManageModal({
                                 onDelete={handleDelete}
                                 onConvertToGlossary={onConvertToGlossary}
                                 onConvertToPreserveTerm={onConvertToPreserveTerm}
+                                t={t}
                             />
 
                         </>
@@ -221,19 +224,19 @@ export default function ManageModal({
     );
 }
 
-function DataTable({ items, isGlossary, editingKey, draft, saving, makeKey, setDraft, onEdit, onSave, onCancel, onDelete, onConvertToGlossary, onConvertToPreserveTerm }) {
+function DataTable({ items, isGlossary, editingKey, draft, saving, makeKey, setDraft, onEdit, onSave, onCancel, onDelete, onConvertToGlossary, onConvertToPreserveTerm, t }) {
 
-    if (items.length === 0) return <div className="data-empty">尚無資料</div>;
+    if (items.length === 0) return <div className="data-empty">{t("manage.empty")}</div>;
 
     return (
         <div className={`data-table ${isGlossary ? "is-glossary" : "is-tm"}`}>
             <div className="data-row data-header">
-                <div className="data-cell">來源語言</div>
-                <div className="data-cell">目標語言</div>
-                <div className="data-cell">來源</div>
-                <div className="data-cell">對應</div>
-                {isGlossary && <div className="data-cell">權重</div>}
-                <div className="data-cell data-actions">操作</div>
+                <div className="data-cell">{t("manage.table.source_lang")}</div>
+                <div className="data-cell">{t("manage.table.target_lang")}</div>
+                <div className="data-cell">{t("manage.table.source")}</div>
+                <div className="data-cell">{t("manage.table.target")}</div>
+                {isGlossary && <div className="data-cell">{t("manage.table.priority")}</div>}
+                <div className="data-cell data-actions">{t("manage.table.actions")}</div>
             </div>
             {(items || []).map((item, idx) => {
                 const rowKey = makeKey(item);
@@ -261,19 +264,19 @@ function DataTable({ items, isGlossary, editingKey, draft, saving, makeKey, setD
                         <div className="data-cell data-actions">
                             {isEditing ? (
                                 <>
-                                    <button className="action-btn-sm success" type="button" onClick={onSave} disabled={saving} title="保存">✅</button>
-                                    <button className="action-btn-sm ghost" type="button" onClick={onCancel} disabled={saving} title="取消">❌</button>
+                                    <button className="action-btn-sm success" type="button" onClick={onSave} disabled={saving} title={t("manage.actions.save")}>✅</button>
+                                    <button className="action-btn-sm ghost" type="button" onClick={onCancel} disabled={saving} title={t("manage.actions.cancel")}>❌</button>
                                 </>
                             ) : (
                                 <>
-                                    <button className="action-btn-sm primary" type="button" onClick={() => onEdit(item)} title="編輯">✏️</button>
+                                    <button className="action-btn-sm primary" type="button" onClick={() => onEdit(item)} title={t("manage.actions.edit")}>✏️</button>
                                     {isGlossary && (
-                                        <button className="action-btn-sm primary" type="button" onClick={() => onConvertToPreserveTerm(item)} title="轉為保留術語">🔒</button>
+                                        <button className="action-btn-sm primary" type="button" onClick={() => onConvertToPreserveTerm(item)} title={t("manage.actions.convert_preserve")}>🔒</button>
                                     )}
                                     {!isGlossary && (
-                                        <button className="action-btn-sm primary" type="button" onClick={() => onConvertToGlossary(item)} title="轉為術語">📑</button>
+                                        <button className="action-btn-sm primary" type="button" onClick={() => onConvertToGlossary(item)} title={t("manage.actions.convert_glossary")}>📑</button>
                                     )}
-                                    <button className="action-btn-sm danger" type="button" onClick={() => onDelete(item)} title="刪除">🗑️</button>
+                                    <button className="action-btn-sm danger" type="button" onClick={() => onDelete(item)} title={t("manage.actions.delete")}>🗑️</button>
                                 </>
                             )}
 

@@ -354,7 +354,7 @@ services:
 
 ### 6.2 Environment Variables
 
-See [.env.example](file:///Users/japlin.chenvpic1.com.vn/Downloads/PPT_Translate/.env.example) for complete list.
+See [.env.example](file:///Users/japlin.chenvpic1.com.vn/Downloads/PPTX-Translate/.env.example) for complete list.
 
 ---
 

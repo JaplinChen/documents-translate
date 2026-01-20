@@ -1,0 +1,298 @@
+{
+    "app": {
+        "title": "PPTX 翻譯與校正控制台"
+    },
+    "nav": {
+        "title": "引導導航",
+        "subtitle": "請依序完成各項配置",
+        "step1": "上傳檔案",
+        "step2": "偏好設定",
+        "step3": "翻譯執行",
+        "step4": "完成下載",
+        "manage": "管理",
+        "settings": "設定"
+    },
+    "sidebar": {
+        "mode": {
+            "label": "模式",
+            "bilingual": "雙語輸出",
+            "translated": "翻譯文件",
+            "correction": "中文校正模式",
+            "translate": "翻譯模式"
+        },
+        "layout": {
+            "label": "版面",
+            "inline": "同框",
+            "auto": "自動",
+            "new_slide": "新頁"
+        },
+        "lang": {
+            "label": "語言設定"
+        },
+        "upload": {
+            "placeholder": "選擇或拖放 PPTX 檔案",
+            "limit": "支援微軟 PowerPoint (.pptx)",
+            "ready": "✓ 已就緒"
+        },
+        "tm": "使用翻譯記憶庫",
+        "preprocess": "數據預處理",
+        "extract": {
+            "button": "📊 智慧提取核心術語庫",
+            "hint": "預先分析簡報內容，設定專業名詞以確保翻譯一致",
+            "summary": "✓ 已自動解析 {{count}} 個區塊"
+        },
+        "translate": {
+            "preparing": "準備翻譯中...",
+            "translating": "翻譯中... ({{current}}/{{total}})",
+            "completed": "翻譯完成",
+            "button": "🚀 開始 AI 自動翻譯",
+            "stop": "停止"
+        },
+        "apply": {
+            "button": "📊 套用排版並下載 PPTX",
+            "applying": "套用中...",
+            "completed": "已輸出檔案"
+        },
+        "export": {
+            "others": "其他格式"
+        },
+        "hint": {
+            "step12": "請先完成步驟 1-2",
+            "step3": "請先完成翻譯"
+        }
+    },
+    "editor": {
+        "title": "文字區塊",
+        "summary": "共 {{total}} 筆，顯示 {{filtered}} 筆",
+        "empty": {
+            "title": "尚未抽取任何文字區塊",
+            "hint": "請先上傳 PPTX 並按下「抽取區塊」"
+        },
+        "filter": {
+            "search": "搜尋",
+            "type": "類型",
+            "slide": "投影片"
+        },
+        "search_placeholder": "搜尋原文/翻譯",
+        "filter_type": "全部類型",
+        "filter_slide": "投影片 {{index}}",
+        "select_all": "全選",
+        "clear_selection": "清除",
+        "source_label": "原文",
+        "translate_label": "翻譯"
+    },
+    "components": {
+        "quality_badge": {
+            "score_label": "品質分數",
+            "excellent": "優秀",
+            "good": "良好",
+            "fair": "尚可",
+            "poor": "待改進",
+            "review": "需審核"
+        },
+        "editor": {
+            "filter_textbox": "文字方塊",
+            "filter_table": "表格儲存格",
+            "filter_notes": "講者備忘錄"
+        },
+        "token_stats": {
+            "title": "Token 用量統計",
+            "session_title": "本次工作階段 (24h)",
+            "input_tokens": "輸入 Token",
+            "output_tokens": "輸出 Token",
+            "total_tokens": "總計 Token",
+            "estimated_cost": "預估成本",
+            "request_count": "請求次數",
+            "all_time_title": "累計統計",
+            "models_used": "使用模型"
+        },
+        "block_card": {
+            "apply": "套用",
+            "slide": "Slide",
+            "shape": "Shape",
+            "translating": "正在翻譯",
+            "updated_at": "更新 {{time}}",
+            "glossary": "術語",
+            "memory": "記憶",
+            "source": "原文",
+            "target": "翻譯 / 校正",
+            "output": "輸出",
+            "placeholder": "輸入翻譯內容或校正文字",
+            "tools_glossary_title": "加入術語庫",
+            "tools_memory_title": "加入翻譯記憶"
+        }
+    },
+    "settings": {
+        "providers": {
+            "ollama": "本機模型 (Ollama)",
+            "gemini": "Gemini (Google)",
+            "chatgpt": "標準 API (OpenAI/Compatible)"
+        },
+        "title": "設定",
+        "tabs": {
+            "llm": "LLM",
+            "ai": "AI 智控",
+            "correction": "校正",
+            "prompt": "Prompt"
+        },
+        "prompt": {
+            "empty": "尚無 Prompt",
+            "reset": "重置 Prompt",
+            "save": "儲存 Prompt",
+            "close": "關閉",
+            "select_prompt": "選擇 Prompt",
+            "prompt_placeholder": "請輸入 Prompt 內容",
+            "loading": "載入中..."
+        },
+        "prompt_labels": {
+            "translate_json": "翻譯 JSON 提示",
+            "system_message": "System 提示",
+            "ollama_batch": "Ollama 批次提示"
+        },
+        "status": {
+            "saving": "儲存中...",
+            "saved": "已儲存",
+            "failed": "儲存失敗"
+        },
+        "ai": {
+            "tone_title": "翻譯風格與語氣 (Tone)",
+            "tone_label": "目標語氣調性",
+            "tone_options": {
+                "professional": "專業商務 (預設)",
+                "concise": "極簡明瞭",
+                "pm": "產品經理 (PM) 視角",
+                "humorous": "風趣幽默",
+                "creative": "富有創意",
+                "academic": "學術嚴謹"
+            },
+            "tone_hint": "這會顯著改變 AI 翻譯時的用詞偏好與句子長度。",
+            "context_title": "AI 多維增強功能",
+            "vision": "視覺情境輔助 (Vision Context)",
+            "vision_hint": "當模型支援時，自動分析簡報圖片與版面資訊以提供更精準的翻譯。",
+            "layout": "智慧排版調整 (Layout Adjust)",
+            "layout_hint": "偵測字數溢出時，自動產出字體縮小或換行建議。"
+        },
+        "correction": {
+            "preview": "即時預覽",
+            "preview_content": "預覽內容 / Preview Text",
+            "fill_color": "底色",
+            "text_color": "文字",
+            "border_color": "外框",
+            "border_style": "外框線條",
+            "dash": "虛線",
+            "dot": "點線",
+            "dashdot": "點虛線",
+            "solid": "實線"
+        },
+        "llm": {
+            "api_key": "API Key",
+            "api_key_placeholder": "輸入 API Key",
+            "api_key_hint": "請輸入對應供應商的 API Key。",
+            "base_url": "Base URL",
+            "base_url_hint": "本機端預設為 {{url}}",
+            "fast_mode": "Ollama 快速模式",
+            "fast_mode_label": "小批次、關閉單次請求",
+            "model": "模型",
+            "refresh": "重新整理",
+            "select_model": "請選擇模型",
+            "custom_model": "輸入自訂模型",
+            "add": "加入",
+            "detect_hint": "請先偵測模型"
+        },
+        "global_status": {
+            "idle": "待命中",
+            "processing": "處理中",
+            "completed": "已完成",
+            "error": "錯誤"
+        }
+    },
+    "manage": {
+        "title": "資料管理",
+        "tabs": {
+            "glossary": "翻譯對照表",
+            "preserve": "保留術語",
+            "tm": "翻譯記憶"
+        },
+        "actions": {
+            "seed": "匯入示範資料",
+            "export_csv": "匯出 CSV",
+            "import_csv": "匯入 CSV",
+            "clear_all": "全部清除",
+            "add": "新增",
+            "edit": "編輯",
+            "delete": "刪除",
+            "save": "保存",
+            "cancel": "取消",
+            "convert_preserve": "轉為保留術語",
+            "convert_glossary": "轉為術語"
+        },
+        "fields": {
+            "source_text": "來源文字",
+            "target_text": "目標文字",
+            "priority": "權重"
+        },
+        "table": {
+            "source_lang": "來源語言",
+            "target_lang": "目標語言",
+            "source": "來源",
+            "target": "對應",
+            "priority": "權重",
+            "actions": "操作"
+        },
+        "confirm": {
+            "delete": "確定要刪除這筆資料嗎？"
+        },
+        "empty": "尚無資料",
+        "preserve": {
+            "search_placeholder": "搜尋術語...",
+            "category_all": "全部分類",
+            "export_csv": "匯出 CSV",
+            "import_csv": "匯入 CSV",
+            "term_placeholder": "術語名稱 (例: Notion)",
+            "add": "+ 新增",
+            "loading": "載入中...",
+            "no_results": "無符合條件的術語",
+            "empty": "尚無保留術語，請新增",
+            "table": {
+                "term": "術語",
+                "category": "分類",
+                "case": "大小寫",
+                "date": "建立時間",
+                "actions": "操作",
+                "yes": "是",
+                "no": "否"
+            },
+            "categories": {
+                "product": "產品名稱",
+                "abbr": "技術縮寫",
+                "special": "專業術語",
+                "other": "其他",
+                "trans": "翻譯術語"
+            },
+            "case_sensitive": "區分大小寫",
+            "alerts": {
+                "add_fail": "新增失敗",
+                "delete_confirm": "確定要刪除此術語？",
+                "delete_fail": "刪除失敗",
+                "update_fail": "更新失敗",
+                "export_fail": "匯出失敗",
+                "import_success": "匯入成功：{{imported}} 筆，略過：{{skipped}} 筆",
+                "import_fail": "匯入失敗"
+            }
+        }
+    },
+    "status": {
+        "extracting": "抽取中...",
+        "error": "發生錯誤: {{message}}",
+        "no_file": "請先選擇檔案",
+        "format_error": "只支援 .pptx 檔案，請重新選擇",
+        "no_blocks": "請先抽取區塊",
+        "api_key_missing": "請先在 LLM 設定中填入 API Key",
+        "interrupted": "連線已中斷 (未收到完成訊號)",
+        "extract_failed": "抽取失敗",
+        "translate_failed": "翻譯發生錯誤",
+        "apply_failed": "套用失敗",
+        "server_error": "伺服器連線異常",
+        "server_timeout": "伺服器響應超時"
+    }
+}

@@ -95,7 +95,7 @@ LLM_MAX_RETRIES=2
 ## 專案結構
 
 ```
-PPT_Translate/
+PPTX-Translate/
 ├── backend/
 │   ├── api/           # FastAPI 路由
 │   ├── services/      # 業務邏輯

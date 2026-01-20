@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useLayoutEffect } from "react";
+import { APP_STATUS } from "../constants";
 
 export function useAppUI(blocks, leftPanelRef) {
-    const [status, setStatus] = useState("待命中");
+    const [status, setStatus] = useState("");
+    const [appStatus, setAppStatus] = useState(APP_STATUS.IDLE);
     const [busy, setBusy] = useState(false);
     const [filterText, setFilterText] = useState("");
     const [filterType, setFilterType] = useState("all");
@@ -49,6 +51,7 @@ export function useAppUI(blocks, leftPanelRef) {
 
     return {
         status, setStatus,
+        appStatus, setAppStatus,
         busy, setBusy,
         filterText, setFilterText,
         filterType, setFilterType,

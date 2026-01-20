@@ -1,0 +1,18 @@
+
+--- ORIGINAL (Slide 7) ---
+Shape ID: 5, Name: Text 1
+  Geometric Box: L:2132907, T:143282, W:7683898, H:413639
+  Auto Size: SHAPE_TO_FIT_TEXT (1)
+  Vertical Anchor: TOP (1)
+    P0 Level: 0, Alignment: CENTER (2)
+       LineSpacing: 0.96, SpaceBefore: None, SpaceAfter: None
+       Text: AI 工具列設置參數 1/8...
+
+--- TRANSLATED (Slide 8) ---
+Shape ID: 960193, Name: Text 1
+  Geometric Box: L:2132907, T:143282, W:7683898, H:413639
+  Auto Size: SHAPE_TO_FIT_TEXT (1)
+  Vertical Anchor: TOP (1)
+    P0 Level: 0, Alignment: CENTER (2)
+       LineSpacing: 0.96, SpaceBefore: None, SpaceAfter: None
+       Text: Cài đặt thanh công cụ AI 1/8...

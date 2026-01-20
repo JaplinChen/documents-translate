@@ -24,13 +24,13 @@
     }
 
     .icon-btn {
-        @apply w-8 h-8 rounded-lg flex items-center justify-center;
+        @apply w-8 h-8 rounded-md flex items-center justify-center;
         @apply border border-slate-300 bg-white text-slate-600 text-lg cursor-pointer transition-all duration-200 shadow-sm;
         @apply hover:text-blue-600 hover:border-blue-600 hover:bg-blue-50 hover:shadow-md;
     }
 
     .btn-icon-action {
-        @apply w-8 h-8 flex items-center justify-center rounded-lg text-lg;
+        @apply w-8 h-8 flex items-center justify-center rounded-md text-lg;
         @apply border border-slate-300 bg-white text-slate-700 cursor-pointer transition-all duration-200 shadow-sm;
         @apply hover:bg-slate-50 hover:border-slate-400 hover:shadow-md;
     }

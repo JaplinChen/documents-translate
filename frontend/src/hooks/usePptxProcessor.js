@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { API_BASE } from "../constants";
+import { useTranslation } from "react-i18next";
+import { API_BASE, APP_STATUS } from "../constants";
 
 export function usePptxProcessor({
     file,
@@ -21,8 +22,10 @@ export function usePptxProcessor({
     lineColor,
     lineDash,
     setStatus,
+    setAppStatus,
     setBusy
 }) {
+    const { t } = useTranslation();
     const [progress, setProgress] = useState(0);
 
     const readErrorDetail = async (response, fallback) => {
@@ -31,10 +34,10 @@ export function usePptxProcessor({
 
         if (errorText.includes("<html>")) {
             const titleMatch = errorText.match(/<title>(.*?)<\/title>/);
-            if (titleMatch && titleMatch[1]) return `伺服器連線異常: ${titleMatch[1]}`;
-            if (response.status === 502) return "伺服器連線中斷 (502 Bad Gateway)";
-            if (response.status === 504) return "伺服器響應超時 (504 Gateway Timeout)";
-            return `連線異常 (${response.status})`;
+            if (titleMatch && titleMatch[1]) return `${t("status.server_error")}: ${titleMatch[1]}`;
+            if (response.status === 502) return `${t("status.server_error")} (502 Bad Gateway)`;
+            if (response.status === 504) return `${t("status.server_timeout")} (504 Gateway Timeout)`;
+            return `${t("status.server_error")} (${response.status})`;
         }
 
         try {
@@ -58,16 +61,17 @@ export function usePptxProcessor({
 
     const handleExtract = async () => {
         if (!file) {
-            setStatus("請先選擇檔案");
+            setStatus(t("status.no_file"));
             return;
         }
         const fileName = file.name.toLowerCase();
         if (!fileName.endsWith(".pptx")) {
-            setStatus("只支援 .pptx 檔案，請重新選擇");
+            setStatus(t("status.format_error"));
             return;
         }
         setBusy(true);
-        setStatus("抽取中...");
+        setStatus(t("status.extracting"));
+        setAppStatus(APP_STATUS.EXTRACTING);
         try {
             const formData = new FormData();
             formData.append("file", file);
@@ -75,7 +79,7 @@ export function usePptxProcessor({
                 method: "POST",
                 body: formData
             });
-            if (!response.ok) throw new Error(await readErrorDetail(response, "抽取失敗"));
+            if (!response.ok) throw new Error(await readErrorDetail(response, t("status.extract_failed")));
             const data = await response.json();
             const nextBlocks = (data.blocks || []).map((block, idx) => {
                 const translatedText = (block.translated_text || "").trim();
@@ -90,10 +94,13 @@ export function usePptxProcessor({
                 };
             });
             setBlocks(nextBlocks);
-            setStatus(`完成抽取，共 ${data.blocks?.length || 0} 筆`);
+            // Store status as object for dynamic localization
+            setStatus({ key: "sidebar.extract.summary", params: { count: data.blocks?.length || 0 } });
+            setAppStatus(APP_STATUS.IDLE);
             return data.language_summary;
         } catch (error) {
-            setStatus(`抽取失敗：${error.message}`);
+            setStatus(`${t("status.extract_failed")}：${error.message}`);
+            setAppStatus(APP_STATUS.ERROR);
         } finally {
             setBusy(false);
         }
@@ -101,16 +108,17 @@ export function usePptxProcessor({
 
     const handleTranslate = async () => {
         if (blocks.length === 0) {
-            setStatus("請先抽取區塊");
+            setStatus(t("status.no_blocks"));
             return;
         }
         if (llmProvider !== "ollama" && !llmApiKey) {
-            setStatus("請先在 LLM 設定中填入 API Key");
+            setStatus(t("status.api_key_missing"));
             return;
         }
         setBusy(true);
         setProgress(0);
-        setStatus(`準備翻譯中...`);
+        setStatus(t("sidebar.translate.preparing"));
+        setAppStatus(APP_STATUS.TRANSLATING);
 
         // Mark all blocks as translating
         setBlocks(prev => prev.map(b => ({ ...b, isTranslating: true })));
@@ -135,7 +143,7 @@ export function usePptxProcessor({
             });
 
             if (!response.ok) {
-                const detail = await readErrorDetail(response, "連線失敗");
+                const detail = await readErrorDetail(response, t("status.translate_failed"));
                 throw new Error(detail);
             }
 
@@ -168,11 +176,12 @@ export function usePptxProcessor({
                                     }));
                                     setBlocks(nextBlocks);
                                     setProgress(100);
-                                    setStatus("翻譯完成");
+                                    setStatus(t("sidebar.translate.completed"));
+                                    setAppStatus(APP_STATUS.TRANSLATION_COMPLETED);
                                     setBusy(false);
                                     return;
                                 } else if (eventType === "error") {
-                                    throw new Error(eventData.detail || "串流發生錯誤");
+                                    throw new Error(eventData.detail || t("status.translate_failed"));
                                 }
                             }
                         }
@@ -181,7 +190,8 @@ export function usePptxProcessor({
                     // If done and still busy (no complete event), treat as interruption
                     setBusy((prevBusy) => {
                         if (prevBusy) {
-                            setStatus("連線已中斷 (未收到完成訊號)");
+                            setStatus(t("status.interrupted"));
+                            setAppStatus(APP_STATUS.IDLE);
                             // Optional: Retry?
                         }
                         return false;
@@ -217,9 +227,7 @@ export function usePptxProcessor({
 
                         const pct = Math.round((completedCount / blocks.length) * 100);
                         setProgress(pct);
-                        setStatus(`翻譯中... (${completedCount}/${blocks.length})`);
-                        // We don't update ALL blocks every single event to avoid jitter,
-                        // but for small progress it's fine.
+                        setStatus(t("sidebar.translate.translating", { current: completedCount, total: blocks.length }));
                     } else if (eventType === "complete") {
                         const finalResult = eventData.blocks || [];
                         const nextBlocks = currentBlocks.map((b, i) => ({
@@ -230,16 +238,18 @@ export function usePptxProcessor({
                         }));
                         setBlocks(nextBlocks);
                         setProgress(100);
-                        setStatus("翻譯完成");
+                        setStatus(t("sidebar.translate.completed"));
+                        setAppStatus(APP_STATUS.TRANSLATION_COMPLETED);
                         setBusy(false);
                         return;
                     } else if (eventType === "error") {
-                        throw new Error(eventData.detail || "串流發生錯誤");
+                        throw new Error(eventData.detail || t("status.translate_failed"));
                     }
                 }
             }
         } catch (error) {
-            setStatus(`翻譯發生錯誤：${error.message}`);
+            setStatus(`${t("status.translate_failed")}：${error.message}`);
+            setAppStatus(APP_STATUS.ERROR);
             setBusy(false);
         }
     };
@@ -247,7 +257,8 @@ export function usePptxProcessor({
     const handleApply = async () => {
         if (!file || blocks.length === 0) return;
         setBusy(true);
-        setStatus("套用中...");
+        setStatus(t("sidebar.apply.applying"));
+        setAppStatus(APP_STATUS.EXPORTING);
         try {
             const isPdf = file.name.toLowerCase().endsWith(".pdf");
             const endpoint = isPdf ? "/api/pdf/apply" : "/api/pptx/apply";
@@ -273,7 +284,7 @@ export function usePptxProcessor({
                 method: "POST",
                 body: formData
             });
-            if (!response.ok) throw new Error("套用失敗");
+            if (!response.ok) throw new Error(t("status.apply_failed"));
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -281,9 +292,11 @@ export function usePptxProcessor({
             a.download = mode === "correction" ? "pptx_corrected.pptx" : "pptx_translated.pptx";
             a.click();
             URL.revokeObjectURL(url);
-            setStatus("已輸出檔案");
+            setStatus(t("sidebar.apply.completed"));
+            setAppStatus(APP_STATUS.EXPORT_COMPLETED);
         } catch (error) {
-            setStatus(`套用失敗：${error.message}`);
+            setStatus(`${t("status.apply_failed")}：${error.message}`);
+            setAppStatus(APP_STATUS.ERROR);
         } finally {
             setBusy(false);
         }

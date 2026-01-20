@@ -1,0 +1,19 @@
+--- ORIGINAL Slide 7 ---
+Shape ID: 5, Name: Text 1, Type: TEXT_BOX (17)
+  Text: AI 工具列設置參數 1/8...
+  Box: L:2132907, T:143282, W:7683898, H:413639
+Shape ID: 28, Name: Picture 27, Type: PICTURE (13)
+Shape ID: 2, Name: Group 1, Type: GROUP (6)
+  Shape ID: 30, Name: TextBox 29, Type: TEXT_BOX (17)
+    Text: 該工具列包括：
+1. ⚙   LLM 設定
+2. 🎭 角色設定
+3. 🎙   語音設定
+4. TW ...
+    Box: L:6473323, T:1522766, W:5387914, H:2874120
+  Shape ID: 6, Name: TextBox 5, Type: TEXT_BOX (17)
+    Text: : 開啟系統詳細設定頁面
+: 選擇數位主播的角色、風格與情緒
+: 設定 AI 語音、性別、語速…等
+...
+    Box: L:8156149, T:2138319, W:3932621, H:1842812

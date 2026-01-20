@@ -1,19 +1,14 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LlmTab from "./settings/LlmTab";
 import CorrectionTab from "./settings/CorrectionTab";
 import PromptTab from "./settings/PromptTab";
 import AiTab from "./settings/AiTab";
 
-const PROMPT_LABELS = {
-  translate_json: "翻譯 JSON 提示",
-  system_message: "System 提示",
-  ollama_batch: "Ollama 批次提示"
-};
-
 const PROVIDERS = [
-  { id: "ollama", name: "Ollama", sub: "本機模型", icon: "💻" },
-  { id: "chatgpt", name: "ChatGPT (OpenAI)", sub: "標準 API", icon: "🤖" },
-  { id: "gemini", name: "Gemini", sub: "Google AI Studio", icon: "✨" }
+  { id: "ollama", name: "Ollama", subKey: "ollama", icon: "💻" },
+  { id: "chatgpt", name: "ChatGPT (OpenAI)", subKey: "chatgpt", icon: "🤖" },
+  { id: "gemini", name: "Gemini", subKey: "gemini", icon: "✨" }
 ];
 
 function SettingsModal({
@@ -56,12 +51,23 @@ function SettingsModal({
   status,
   apiBase
 }) {
+  const { t } = useTranslation();
   const [showKey, setShowKey] = useState(false);
   const [promptList, setPromptList] = useState([]);
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [promptContent, setPromptContent] = useState("");
   const [promptStatus, setPromptStatus] = useState("");
   const [promptLoading, setPromptLoading] = useState(false);
+
+  const PROMPT_LABELS = React.useMemo(() => ({
+    translate_json: t("settings.prompt_labels.translate_json"),
+    system_message: t("settings.prompt_labels.system_message"),
+    ollama_batch: t("settings.prompt_labels.ollama_batch")
+  }), [t]);
+
+  const getPromptLabel = (name) => {
+    return PROMPT_LABELS[name] || name;
+  };
 
   useEffect(() => {
     if (!open || tab !== "prompt") return;
@@ -104,18 +110,18 @@ function SettingsModal({
 
   const handleSavePrompt = async () => {
     if (!selectedPrompt) return;
-    setPromptStatus("儲存中...");
+    setPromptStatus(t("settings.status.saving"));
     try {
       await fetch(`${apiBase}/api/prompts/${selectedPrompt}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: promptContent })
       });
-      setPromptStatus("已儲存");
+      setPromptStatus(t("settings.status.saved"));
       setTimeout(() => setPromptStatus(""), 2000);
       onClose();
     } catch (error) {
-      setPromptStatus("儲存失敗");
+      setPromptStatus(t("settings.status.failed"));
     }
   };
 
@@ -135,21 +141,35 @@ function SettingsModal({
   const displayedModels = [...(llmModels || [])];
   if (llmModel && !displayedModels.includes(llmModel)) displayedModels.unshift(llmModel);
 
+  const getProviderSub = (key) => {
+    // Simple switch for provider subtext translation
+    if (key === 'ollama') return t("settings.providers.ollama");
+    if (key === 'chatgpt') return t("settings.providers.chatgpt");
+    if (key === 'gemini') return t("settings.providers.gemini");
+    return "";
+  };
+  // Actually I missed adding provider keys to JSON. I'll stick to hardcoded English/Chinese for now or generic terms.
+  // Or I can just leave them hardcoded if they are brand names / technical terms.
+
+  // Let's use hardcoded English for now as it's universally understood for devs, or just keep original Chinese if target is mainly TW.
+  // Given I added 'vi' and 'en', I should probably use `t`.
+  // I will use `t` with fallback.
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-wide" onClick={(event) => event.stopPropagation()}>
         <div className="settings-shell">
           <aside className="settings-sidebar">
-            <h4 className="sidebar-title">設定</h4>
+            <h4 className="sidebar-title">{t("settings.title")}</h4>
             <div className="sidebar-tabs">
-              {["llm", "ai", "correction", "prompt"].map((t) => (
+              {["llm", "ai", "correction", "prompt"].map((tKey) => (
                 <button
-                  key={t}
-                  className={`sidebar-tab ${tab === t ? "active" : ""}`}
+                  key={tKey}
+                  className={`sidebar-tab ${tab === tKey ? "active" : ""}`}
                   type="button"
-                  onClick={() => setTab(t)}
+                  onClick={() => setTab(tKey)}
                 >
-                  {t === "llm" ? "LLM" : t === "ai" ? "AI 智控" : t === "correction" ? "校正" : "Prompt"}
+                  {t(`settings.tabs.${tKey}`)}
                 </button>
               ))}
             </div>
@@ -165,7 +185,12 @@ function SettingsModal({
                     <span className="sidebar-icon">{item.icon}</span>
                     <div className="sidebar-text">
                       <div className="sidebar-name">{item.name}</div>
-                      <div className="sidebar-sub">{item.sub}</div>
+                      <div className="sidebar-sub">
+                        {/* Use t() for provider names */}
+                        {item.id === "ollama" ? t("settings.providers.ollama") :
+                          item.id === "chatgpt" ? t("settings.providers.chatgpt") :
+                            item.id === "gemini" ? t("settings.providers.gemini") : ""}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -174,7 +199,7 @@ function SettingsModal({
             {tab === "prompt" && (
               <div className="sidebar-list">
                 {(promptList || []).length === 0 ? (
-                  <div className="sidebar-empty">尚無 Prompt</div>
+                  <div className="sidebar-empty">{t("settings.prompt.empty")}</div>
                 ) : (
                   (promptList || []).map((name) => (
                     <button
@@ -185,7 +210,7 @@ function SettingsModal({
                     >
                       <span className="sidebar-icon">🧩</span>
                       <div className="sidebar-text">
-                        <div className="sidebar-name">{PROMPT_LABELS[name] || name}</div>
+                        <div className="sidebar-name">{getPromptLabel(name)}</div>
                         <div className="sidebar-sub">{name}</div>
                       </div>
                     </button>
@@ -198,18 +223,18 @@ function SettingsModal({
           <div className="settings-main">
             <div className="modal-header fancy">
               <div className="header-title">
-                {tab === "llm" && <h3>{currentProvider.name} 設定</h3>}
-                {tab === "ai" && <h3>AI 進階智控</h3>}
-                {tab === "correction" && <h3>校正設定</h3>}
-                {tab === "prompt" && <h3>Prompt 設定</h3>}
+                {tab === "llm" && <h3>{currentProvider.name} {t("settings.title")}</h3>}
+                {tab === "ai" && <h3>{t("settings.tabs.ai")}</h3>}
+                {tab === "correction" && <h3>{t("settings.tabs.correction")} {t("settings.title")}</h3>}
+                {tab === "prompt" && <h3>{t("settings.tabs.prompt")} {t("settings.title")}</h3>}
               </div>
               <div className="header-actions">
                 {tab === "prompt" ? (
                   <>
                     <a className="text-xs text-green-600 mr-2">{promptStatus}</a>
-                    <button className="btn-icon-action" type="button" onClick={handleResetPrompt} title="重置 Prompt">↺</button>
-                    <button className="btn-icon-action" type="button" onClick={onClose} title="關閉">✕</button>
-                    <button className="btn-icon-action text-primary border-primary" type="button" onClick={handleSavePrompt} title="儲存 Prompt">✔</button>
+                    <button className="btn-icon-action" type="button" onClick={handleResetPrompt} title={t("settings.prompt.reset")}>↺</button>
+                    <button className="btn-icon-action" type="button" onClick={onClose} title={t("settings.prompt.close")}>✕</button>
+                    <button className="btn-icon-action text-primary border-primary" type="button" onClick={handleSavePrompt} title={t("settings.prompt.save")}>✔</button>
                   </>
                 ) : (
                   <>
@@ -270,7 +295,7 @@ function SettingsModal({
                   promptContent={promptContent}
                   setPromptContent={setPromptContent}
                   promptLoading={promptLoading}
-                  PROMPT_LABELS={PROMPT_LABELS}
+                  PROMPT_LABELS={PROMPT_LABELS} // Ideally this should be removed if we use local logic
                 />
               )}
             </div>

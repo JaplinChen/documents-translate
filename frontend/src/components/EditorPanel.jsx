@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import BlockCard from "./BlockCard";
 
 export function EditorPanel({
@@ -20,42 +21,44 @@ export function EditorPanel({
     extractLanguageLines,
     editorRefs
 }) {
+    const { t } = useTranslation();
+
     return (
         <section className="panel panel-right">
             <div className="panel-header">
-                <h2>文字區塊</h2>
-                <p>共 {blockCount} 筆，顯示 {filteredBlocks.length} 筆</p>
+                <h2>{t("editor.title")}</h2>
+                <p>{t("editor.summary", { total: blockCount, filtered: filteredBlocks.length })}</p>
             </div>
 
             {blockCount === 0 ? (
                 <div className="empty-state">
-                    <p>尚未抽取任何文字區塊</p>
-                    <span>請先上傳 PPTX 並按下「抽取區塊」</span>
+                    <p>{t("editor.empty.title")}</p>
+                    <span>{t("editor.empty.hint")}</span>
                 </div>
             ) : (
                 <>
                     <div className="filter-row">
                         <div className="filter-item">
-                            <label className="field-label">搜尋</label>
+                            <label className="field-label">{t("editor.filter.search")}</label>
                             <input
                                 className="select-input"
                                 type="text"
                                 value={filterText}
-                                placeholder="搜尋原文/翻譯"
+                                placeholder={t("editor.search_placeholder")}
                                 onChange={(e) => setFilterText(e.target.value)}
                             />
                         </div>
                         <div className="filter-item">
-                            <label className="field-label">類型</label>
+                            <label className="field-label">{t("editor.filter.type")}</label>
                             <select className="select-input" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                                <option value="all">全部</option>
-                                <option value="textbox">textbox</option>
-                                <option value="table_cell">table_cell</option>
-                                <option value="notes">notes</option>
+                                <option value="all">{t("editor.filter_type")}</option>
+                                <option value="textbox">{t("components.editor.filter_textbox")}</option>
+                                <option value="table_cell">{t("components.editor.filter_table")}</option>
+                                <option value="notes">{t("components.editor.filter_notes")}</option>
                             </select>
                         </div>
                         <div className="filter-item">
-                            <label className="field-label">Slide</label>
+                            <label className="field-label">{t("editor.filter.slide")}</label>
                             <input
                                 className="select-input"
                                 type="number"
@@ -65,8 +68,8 @@ export function EditorPanel({
                             />
                         </div>
                         <div className="filter-actions flex gap-2 ml-auto">
-                            <button className="btn ghost compact" type="button" onClick={onSelectAll}>全選</button>
-                            <button className="btn ghost compact" type="button" onClick={onClearSelection}>清除</button>
+                            <button className="btn ghost compact" type="button" onClick={onSelectAll}>{t("editor.select_all")}</button>
+                            <button className="btn ghost compact" type="button" onClick={onClearSelection}>{t("editor.clear_selection")}</button>
                         </div>
                     </div>
 

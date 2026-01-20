@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import SettingsModal from "./components/SettingsModal";
 import ManageModal from "./components/ManageModal";
 import { Navbar } from "./components/Navbar";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPanel } from "./components/EditorPanel";
-import { API_BASE } from "./constants";
+import { API_BASE, APP_STATUS } from "./constants";
 
 // Hooks
 import { useLlmSettings } from "./hooks/useLlmSettings";
@@ -13,6 +14,8 @@ import { useAppUI } from "./hooks/useAppUI";
 import { usePptxProcessor } from "./hooks/usePptxProcessor";
 
 function App() {
+  const { t } = useTranslation();
+
   // --- Persistent States (Managed in App for sharing) ---
   const [file, setFile] = useState(null);
   const [blocks, setBlocks] = useState([]);
@@ -25,7 +28,6 @@ function App() {
   const [secondaryLocked, setSecondaryLocked] = useState(false);
   const [targetLocked, setTargetLocked] = useState(false);
 
-  // Correction Settings (with localStorage persistence)
   // Correction Settings (with localStorage persistence)
   const [fillColor, setFillColor] = useState(() => {
     const v = localStorage.getItem("correction_fillColor");
@@ -53,7 +55,7 @@ function App() {
   }, [fillColor, textColor, lineColor, lineDash]);
 
   // Advanced AI Settings
-  const [llmTone, setLlmTone] = useState("professional"); // professional, concise, humorous, pm, creative
+  const [llmTone, setLlmTone] = useState("professional");
   const [useVisionContext, setUseVisionContext] = useState(true);
   const [useSmartLayout, setUseSmartLayout] = useState(true);
 
@@ -77,18 +79,19 @@ function App() {
     bilingualLayout,
     fillColor, textColor, lineColor, lineDash,
     setStatus: ui.setStatus,
+    setAppStatus: ui.setAppStatus,
     setBusy: ui.setBusy
   });
 
   // --- Helpers ---
   const languageOptions = [
-    { code: "auto", label: "自動" },
-    { code: "vi", label: "越南語" },
+    { code: "auto", label: "自動 (Auto)" },
+    { code: "vi", label: "Tiếng Việt" },
     { code: "zh-TW", label: "繁體中文" },
-    { code: "zh-CN", label: "簡體中文" },
-    { code: "en", label: "英文" },
-    { code: "ja", label: "日文" },
-    { code: "ko", label: "韓文" }
+    { code: "zh-CN", label: "简体中文" },
+    { code: "en", label: "English" },
+    { code: "ja", label: "日本語" },
+    { code: "ko", label: "한국어" }
   ];
 
   const extractLanguageLines = (text, lang) => {
@@ -110,8 +113,6 @@ function App() {
   };
 
   // --- Effects ---
-  // Auto-extract: When file is selected, immediately extract text and detect language
-  // This is separate from translation - just getting the content ready
   useEffect(() => {
     if (!file) return;
     processor.handleExtract().then(applyDetectedLanguages);
@@ -138,19 +139,21 @@ function App() {
   const isFileSelected = !!file;
   const isExtracted = blocks.length > 0;
   const hasTranslation = blocks.some(b => b.translated_text);
-  const isFinished = ui.status.includes("輸出") || ui.status.includes("完成");
 
-  // Determine current step (1-4): Upload → Settings → Translate → Download
+  // Robust stepper logic using Enum
+  const isExportFinished = ui.appStatus === APP_STATUS.EXPORT_COMPLETED || ui.appStatus === APP_STATUS.EXPORTING;
+  const isTranslatingOrDone = hasTranslation || ui.appStatus === APP_STATUS.TRANSLATING || ui.appStatus === APP_STATUS.TRANSLATION_COMPLETED;
+
   let currentStep = 1;
-  if (isFinished) currentStep = 4;
-  else if (hasTranslation || ui.status.includes("翻譯")) currentStep = 3;
+  if (isExportFinished) currentStep = 4;
+  else if (isTranslatingOrDone) currentStep = 3;
   else if (isExtracted) currentStep = 2;
 
   const steps = [
-    { id: 1, label: "上傳" },
-    { id: 2, label: "設定" },
-    { id: 3, label: "翻譯" },
-    { id: 4, label: "下載" }
+    { id: 1, label: t("nav.step1") },
+    { id: 2, label: t("nav.step2") },
+    { id: 3, label: t("nav.step3") },
+    { id: 4, label: t("nav.step4") }
   ];
 
   return (
@@ -160,6 +163,7 @@ function App() {
           currentStep={currentStep}
           steps={steps}
           status={ui.status}
+          appStatus={ui.appStatus}
           progress={processor.progress}
           onOpenSettings={() => llm.setLlmOpen(true)}
           onOpenManage={() => tm.setManageOpen(true)}
@@ -194,8 +198,9 @@ function App() {
           blockCount={blocks.length}
           selectedCount={blocks.filter(b => b.selected !== false).length}
           status={ui.status}
+          appStatus={ui.appStatus}
           sidebarRef={leftPanelRef}
-          modeDescription={mode === "correction" ? "中文校正模式" : "翻譯模式"}
+          modeDescription={mode === "correction" ? t("sidebar.mode.correction") : t("sidebar.mode.translate")}
           llmTone={llmTone} setLlmTone={setLlmTone}
           useVisionContext={useVisionContext} setUseVisionContext={setUseVisionContext}
           useSmartLayout={useSmartLayout} setUseSmartLayout={setUseSmartLayout}
@@ -234,9 +239,7 @@ function App() {
         llmModels={llm.llmModels} llmStatus={llm.llmStatus}
         onDetect={llm.handleDetectModels} onSave={llm.handleSaveLlm}
         onSaveCorrection={() => {
-          // Triggered when "Check" button is clicked in Correction tab
-          // Settings are already auto-saved via useEffect above
-          ui.setStatus("已儲存設定");
+          ui.setStatus(t("settings.status.saved"));
           llm.setLlmOpen(false);
         }}
         defaultBaseUrl={llm.defaultBaseUrl}
@@ -256,6 +259,7 @@ function App() {
           llmBaseUrl: llm.llmBaseUrl,
           llmModel: llm.llmModel,
           setStatus: ui.setStatus,
+          setAppStatus: ui.setAppStatus,
           setBusy: ui.setBusy
         })}
         busy={ui.busy}

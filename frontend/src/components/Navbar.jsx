@@ -1,7 +1,12 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
+import { APP_STATUS } from "../constants";
 import TokenStats from "./TokenStats";
+import LanguageSelector from "./LanguageSelector";
 
-export function Navbar({ currentStep, status, onOpenSettings, onOpenManage, steps, progress }) {
+export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenManage, steps, progress }) {
+    const { t } = useTranslation();
+
     return (
         <nav className="navbar">
             {progress > 0 && progress < 100 && (
@@ -11,7 +16,7 @@ export function Navbar({ currentStep, status, onOpenSettings, onOpenManage, step
             )}
             <div className="navbar-brand">
                 <span className="brand-logo">💎</span>
-                <span className="brand-name">PPTX 翻譯與校正控制台</span>
+                <span className="brand-name">{t("app.title")}</span>
             </div>
 
             <div className="navbar-nav">
@@ -30,22 +35,33 @@ export function Navbar({ currentStep, status, onOpenSettings, onOpenManage, step
             </div>
 
             <div className="navbar-actions">
-                <TokenStats />
-
-                <div className={`mini-status ${status.includes("失敗") || status.includes("異常") || status.includes("中斷") ? "is-error" : ""}`}>
+                <div className={`mini-status ${appStatus === APP_STATUS.ERROR ? "is-error" : ""}`}>
                     <span className="dot pulse-blue"></span>
-                    <span className="status-text" title={status}>{status}</span>
-                </div>
-
-                <div className="action-btns">
-                    <button className="nav-btn" onClick={onOpenManage} title="資源庫管理">
-                        📚 管理
-                    </button>
-                    <button className="nav-btn primary" onClick={onOpenSettings} title="系統設定">
-                        ⚙ 設定
-                    </button>
+                    <span className="status-text" title={status && typeof status === 'string' ? status : (status?.key ? t(status.key, status.params) : t(`settings.global_status.${appStatus?.toLowerCase() || 'idle'}`))}>
+                        {(() => {
+                            if (typeof status === 'string' && status) return status;
+                            if (status && typeof status === 'object' && status.key) {
+                                return t(status.key, status.params);
+                            }
+                            if (appStatus === APP_STATUS.IDLE) {
+                                return t("settings.global_status.idle");
+                            }
+                            return t(`settings.global_status.${appStatus?.toLowerCase() || 'idle'}`);
+                        })()}
+                    </span>
                 </div>
             </div>
-        </nav>
+
+            <div className="action-btns">
+                <LanguageSelector />
+                <TokenStats />
+                <button className="nav-icon-btn" onClick={onOpenManage} title={t("nav.manage")}>
+                    📚
+                </button>
+                <button className="nav-icon-btn" onClick={onOpenSettings} title={t("nav.settings")}>
+                    ⚙
+                </button>
+            </div>
+        </nav >
     );
 }

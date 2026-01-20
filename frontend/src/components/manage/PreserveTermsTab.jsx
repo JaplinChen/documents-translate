@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "../../constants";
 
 export default function PreserveTermsTab({ onClose }) {
+    const { t } = useTranslation();
     const [terms, setTerms] = useState([]);
     const [loading, setLoading] = useState(false);
     const [newTerm, setNewTerm] = useState({
@@ -12,7 +14,23 @@ export default function PreserveTermsTab({ onClose }) {
     const [filterText, setFilterText] = useState("");
     const [filterCategory, setFilterCategory] = useState("all");
 
+    // Map internal values to translation keys
+    const categoryKeyMap = {
+        "產品名稱": "product",
+        "技術縮寫": "abbr",
+        "專業術語": "special",
+        "其他": "other",
+        "翻譯術語": "trans"
+    };
+
+    // Reverse map for display if needed, or just use keys directly
+    // Ideally backend should store keys, but for now we map legacy values
     const categories = ["產品名稱", "技術縮寫", "專業術語", "其他"];
+
+    const getCategoryLabel = (cat) => {
+        const key = categoryKeyMap[cat] || "other";
+        return t(`manage.preserve.categories.${key}`);
+    };
 
     const fetchTerms = async () => {
         try {
@@ -44,28 +62,28 @@ export default function PreserveTermsTab({ onClose }) {
 
             if (!res.ok) {
                 const err = await res.json();
-                alert(err.detail || "新增失敗");
+                alert(err.detail || t("manage.preserve.alerts.add_fail"));
                 return;
             }
 
             await fetchTerms();
             setNewTerm({ term: "", category: "產品名稱", case_sensitive: true });
         } catch (error) {
-            alert("新增失敗: " + error.message);
+            alert(`${t("manage.preserve.alerts.add_fail")}: ${error.message}`);
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!confirm("確定要刪除此術語？")) return;
+        if (!confirm(t("manage.preserve.alerts.delete_confirm"))) return;
 
         try {
             setLoading(true);
             await fetch(`${API_BASE}/api/preserve-terms/${id}`, { method: "DELETE" });
             await fetchTerms();
         } catch (error) {
-            alert("刪除失敗: " + error.message);
+            alert(`${t("manage.preserve.alerts.delete_fail")}: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -102,14 +120,14 @@ export default function PreserveTermsTab({ onClose }) {
 
             if (!res.ok) {
                 const err = await res.json();
-                alert(err.detail || "更新失敗");
+                alert(err.detail || t("manage.preserve.alerts.update_fail"));
                 return;
             }
 
             await fetchTerms();
             handleCancelEdit();
         } catch (error) {
-            alert("更新失敗: " + error.message);
+            alert(`${t("manage.preserve.alerts.update_fail")}: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -125,7 +143,7 @@ export default function PreserveTermsTab({ onClose }) {
             a.download = "preserve_terms.csv";
             a.click();
         } catch (error) {
-            alert("匯出失敗: " + error.message);
+            alert(`${t("manage.preserve.alerts.export_fail")}: ${error.message}`);
         }
     };
 
@@ -143,10 +161,10 @@ export default function PreserveTermsTab({ onClose }) {
             });
 
             const result = await res.json();
-            alert(`匯入成功：${result.imported} 筆，略過：${result.skipped} 筆`);
+            alert(t("manage.preserve.alerts.import_success", { imported: result.imported, skipped: result.skipped }));
             await fetchTerms();
         } catch (error) {
-            alert("匯入失敗: " + error.message);
+            alert(`${t("manage.preserve.alerts.import_fail")}: ${error.message}`);
         } finally {
             setLoading(false);
             e.target.value = "";
@@ -165,19 +183,19 @@ export default function PreserveTermsTab({ onClose }) {
                 <input
                     className="select-input"
                     type="text"
-                    placeholder="搜尋術語..."
+                    placeholder={t("manage.preserve.search_placeholder")}
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
                 />
                 <select className="select-input" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                    <option value="all">全部分類</option>
+                    <option value="all">{t("manage.preserve.category_all")}</option>
                     {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat}>{getCategoryLabel(cat)}</option>
                     ))}
                 </select>
-                <button className="btn ghost" type="button" onClick={handleExport}>匯出 CSV</button>
+                <button className="btn ghost" type="button" onClick={handleExport}>{t("manage.preserve.export_csv")}</button>
                 <label className="btn ghost">
-                    匯入 CSV
+                    {t("manage.preserve.import_csv")}
                     <input type="file" accept=".csv" onChange={handleImport} style={{ display: "none" }} />
                 </label>
             </div>
@@ -187,7 +205,7 @@ export default function PreserveTermsTab({ onClose }) {
                     <input
                         className="data-input"
                         type="text"
-                        placeholder="術語名稱 (例: Notion)"
+                        placeholder={t("manage.preserve.term_placeholder")}
                         value={newTerm.term}
                         onChange={(e) => setNewTerm({ ...newTerm, term: e.target.value })}
                         style={{ flex: 2 }}
@@ -198,7 +216,7 @@ export default function PreserveTermsTab({ onClose }) {
                         onChange={(e) => setNewTerm({ ...newTerm, category: e.target.value })}
                     >
                         {categories.map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
+                            <option key={cat} value={cat}>{getCategoryLabel(cat)}</option>
                         ))}
                     </select>
                     <label className="toggle-check">
@@ -207,29 +225,29 @@ export default function PreserveTermsTab({ onClose }) {
                             checked={newTerm.case_sensitive}
                             onChange={(e) => setNewTerm({ ...newTerm, case_sensitive: e.target.checked })}
                         />
-                        <span>區分大小寫</span>
+                        <span>{t("manage.preserve.case_sensitive")}</span>
                     </label>
                 </div>
                 <button className="btn primary" type="button" onClick={handleAdd} disabled={loading || !newTerm.term.trim()}>
-                    + 新增
+                    {t("manage.preserve.add")}
                 </button>
             </div>
 
             {loading ? (
-                <div className="data-empty">載入中...</div>
+                <div className="data-empty">{t("manage.preserve.loading")}</div>
             ) : filteredTerms.length === 0 ? (
                 <div className="data-empty">
-                    {filterText || filterCategory !== "all" ? "無符合條件的術語" : "尚無保留術語，請新增"}
+                    {filterText || filterCategory !== "all" ? t("manage.preserve.no_results") : t("manage.preserve.empty")}
                 </div>
             ) : (
                 <div className="data-table">
                     <div className="data-header">
                         <div className="data-row" style={{ gridTemplateColumns: "2fr 1fr 100px 80px 100px" }}>
-                            <div className="data-cell">術語</div>
-                            <div className="data-cell">分類</div>
-                            <div className="data-cell">大小寫</div>
-                            <div className="data-cell">建立時間</div>
-                            <div className="data-cell">操作</div>
+                            <div className="data-cell">{t("manage.preserve.table.term")}</div>
+                            <div className="data-cell">{t("manage.preserve.table.category")}</div>
+                            <div className="data-cell">{t("manage.preserve.table.case")}</div>
+                            <div className="data-cell">{t("manage.preserve.table.date")}</div>
+                            <div className="data-cell">{t("manage.preserve.table.actions")}</div>
                         </div>
                     </div>
                     {filteredTerms.map((term) => {
@@ -253,11 +271,11 @@ export default function PreserveTermsTab({ onClose }) {
                                             onChange={(e) => setEditDraft({ ...editDraft, category: e.target.value })}
                                         >
                                             {categories.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
+                                                <option key={cat} value={cat}>{getCategoryLabel(cat)}</option>
                                             ))}
-                                            <option value="翻譯術語">翻譯術語</option>
+                                            <option value="翻譯術語">{getCategoryLabel("翻譯術語")}</option>
                                         </select>
-                                    ) : term.category}
+                                    ) : getCategoryLabel(term.category)}
                                 </div>
                                 <div className="data-cell">
                                     {isEditing ? (
@@ -266,19 +284,19 @@ export default function PreserveTermsTab({ onClose }) {
                                             checked={editDraft?.case_sensitive || false}
                                             onChange={(e) => setEditDraft({ ...editDraft, case_sensitive: e.target.checked })}
                                         />
-                                    ) : (term.case_sensitive ? "是" : "否")}
+                                    ) : (term.case_sensitive ? t("manage.preserve.table.yes") : t("manage.preserve.table.no"))}
                                 </div>
                                 <div className="data-cell">{new Date(term.created_at).toLocaleDateString()}</div>
                                 <div className="data-cell data-actions">
                                     {isEditing ? (
                                         <>
-                                            <button className="action-btn-sm success" type="button" onClick={handleUpdate} disabled={loading}>✅</button>
-                                            <button className="action-btn-sm ghost" type="button" onClick={handleCancelEdit}>❌</button>
+                                            <button className="action-btn-sm success" type="button" onClick={handleUpdate} disabled={loading} title={t("manage.actions.save")}>✅</button>
+                                            <button className="action-btn-sm ghost" type="button" onClick={handleCancelEdit} title={t("manage.actions.cancel")}>❌</button>
                                         </>
                                     ) : (
                                         <>
-                                            <button className="action-btn-sm primary" type="button" onClick={() => handleEdit(term)}>✏️</button>
-                                            <button className="action-btn-sm danger" type="button" onClick={() => handleDelete(term.id)}>🗑️</button>
+                                            <button className="action-btn-sm primary" type="button" onClick={() => handleEdit(term)} title={t("manage.actions.edit")}>✏️</button>
+                                            <button className="action-btn-sm danger" type="button" onClick={() => handleDelete(term.id)} title={t("manage.actions.delete")}>🗑️</button>
                                         </>
                                     )}
                                 </div>

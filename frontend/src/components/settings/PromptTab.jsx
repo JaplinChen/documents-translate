@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 function PromptTab({
     promptList,
@@ -9,10 +10,12 @@ function PromptTab({
     promptLoading,
     PROMPT_LABELS
 }) {
+    const { t } = useTranslation();
+
     return (
         <div className="prompt-editor-container">
             <div className="prompt-selector-row">
-                <label className="prompt-selector-label">選擇 Prompt</label>
+                <label className="prompt-selector-label">{t("settings.prompt.select_prompt")}</label>
                 <select
                     className="prompt-template-select"
                     value={selectedPrompt}
@@ -29,7 +32,7 @@ function PromptTab({
                 className="prompt-textarea"
                 value={promptContent}
                 onChange={(event) => setPromptContent(event.target.value)}
-                placeholder={promptLoading ? "載入中..." : "請輸入 Prompt 內容"}
+                placeholder={promptLoading ? t("settings.prompt.loading") : t("settings.prompt.prompt_placeholder")}
                 rows={16}
                 spellCheck="false"
                 disabled={promptLoading}

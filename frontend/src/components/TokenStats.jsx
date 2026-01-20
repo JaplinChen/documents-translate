@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "../constants";
 
 /**
@@ -6,6 +7,7 @@ import { API_BASE } from "../constants";
  * Shows real-time token usage and cost estimation
  */
 export default function TokenStats({ className = "" }) {
+    const { t } = useTranslation();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [expanded, setExpanded] = useState(false);
@@ -24,8 +26,8 @@ export default function TokenStats({ className = "" }) {
 
     useEffect(() => {
         fetchStats();
-        // Refresh every 30 seconds
-        const interval = setInterval(fetchStats, 30000);
+        // Refresh every 60 seconds
+        const interval = setInterval(fetchStats, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -52,7 +54,7 @@ export default function TokenStats({ className = "" }) {
             <button
                 className="token-stats-toggle"
                 onClick={() => setExpanded(!expanded)}
-                title="Token 用量統計"
+                title={t("components.token_stats.title")}
             >
                 <span className="token-icon">🔢</span>
                 <span className="token-count">{formatNumber(session.total_tokens)}</span>
@@ -62,45 +64,45 @@ export default function TokenStats({ className = "" }) {
             {expanded && (
                 <div className="token-stats-dropdown">
                     <div className="token-stats-header">
-                        <h4>Token 用量統計</h4>
+                        <h4>{t("components.token_stats.title")}</h4>
                         <button className="close-btn" onClick={() => setExpanded(false)}>×</button>
                     </div>
 
                     <div className="token-stats-section">
-                        <h5>📊 本次工作階段 (24h)</h5>
+                        <h5>📊 {t("components.token_stats.session_title")}</h5>
                         <div className="stats-grid">
                             <div className="stat-item">
-                                <span className="stat-label">輸入 Token</span>
+                                <span className="stat-label">{t("components.token_stats.input_tokens")}</span>
                                 <span className="stat-value">{formatNumber(session.prompt_tokens)}</span>
                             </div>
                             <div className="stat-item">
-                                <span className="stat-label">輸出 Token</span>
+                                <span className="stat-label">{t("components.token_stats.output_tokens")}</span>
                                 <span className="stat-value">{formatNumber(session.completion_tokens)}</span>
                             </div>
                             <div className="stat-item">
-                                <span className="stat-label">總計 Token</span>
+                                <span className="stat-label">{t("components.token_stats.total_tokens")}</span>
                                 <span className="stat-value highlight">{formatNumber(session.total_tokens)}</span>
                             </div>
                             <div className="stat-item">
-                                <span className="stat-label">預估成本</span>
+                                <span className="stat-label">{t("components.token_stats.estimated_cost")}</span>
                                 <span className="stat-value cost">{formatCost(session.estimated_cost_usd)}</span>
                             </div>
                         </div>
-                        <p className="stat-hint">請求次數：{session.request_count}</p>
+                        <p className="stat-hint">{t("components.token_stats.request_count")}：{session.request_count}</p>
                     </div>
 
                     <div className="token-stats-section">
-                        <h5>📈 累計統計</h5>
+                        <h5>📈 {t("components.token_stats.all_time_title")}</h5>
                         <div className="stats-row">
                             <span>{formatNumber(all_time.total_tokens)} Tokens</span>
                             <span>{formatCost(all_time.estimated_cost_usd)}</span>
-                            <span>{all_time.request_count} 次請求</span>
+                            <span>{all_time.request_count} {t("components.token_stats.request_count")}</span>
                         </div>
                     </div>
 
                     {session.models_used && session.models_used.length > 0 && (
                         <div className="token-stats-section">
-                            <h5>🤖 使用模型</h5>
+                            <h5>🤖 {t("components.token_stats.models_used")}</h5>
                             <div className="model-tags">
                                 {session.models_used.map((model, i) => (
                                     <span key={i} className="model-tag">{model}</span>

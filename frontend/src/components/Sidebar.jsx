@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { API_BASE } from "../constants";
+import { useTranslation } from "react-i18next";
+import { API_BASE, APP_STATUS } from "../constants";
 import { CustomSelect } from "./common/CustomSelect";
 
 // Inline ExportButton component for multi-format exports
@@ -15,7 +16,7 @@ function ExportButton({ format, label, blocks, disabled }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ blocks }),
             });
-            if (!response.ok) throw new Error("匯出失敗");
+            if (!response.ok) throw new Error("Export failed");
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -62,19 +63,22 @@ export function Sidebar({
     blockCount,
     selectedCount,
     status,
+    appStatus,
     sidebarRef,
     modeDescription,
     llmTone, setLlmTone,
     useVisionContext, setUseVisionContext,
     useSmartLayout, setUseSmartLayout,
-    blocks  // Add blocks prop for export functionality
+    blocks
 }) {
+    const { t } = useTranslation();
     const isFileSelected = !!file;
     const isExtracted = blockCount > 0;
 
-    // 精確狀態判斷 - 使用完全匹配或開頭匹配，避免子字串誤判
-    const hasTranslation = status === "翻譯完成" || status.startsWith("翻譯完成");
-    const isFinished = status === "已輸出檔案" || status === "下載完成";
+    // Status check - relies on block state for robustness
+    const hasTranslation = blocks && blocks.some(b => b.translated_text);
+    const isTranslating = appStatus === APP_STATUS.TRANSLATING;
+    const isFinished = appStatus === APP_STATUS.EXPORT_COMPLETED;
 
     const [openSections, setOpenSections] = useState({
         step1: true,
@@ -84,33 +88,23 @@ export function Sidebar({
     });
 
     // Auto-open sections based on progress
-    // 只在特定狀態變化時觸發，優先順序從下往上（最終狀態優先）
     useEffect(() => {
-        // 最終狀態：已輸出
         if (isFinished) {
             setOpenSections({ step1: false, step2: false, step3: false, step4: true });
             return;
         }
-
-        // 翻譯完成：展開下載
         if (hasTranslation) {
             setOpenSections({ step1: false, step2: false, step3: false, step4: true });
             return;
         }
-
-        // 有區塊但未翻譯：展開設定與翻譯
         if (isExtracted && !hasTranslation) {
             setOpenSections({ step1: false, step2: true, step3: true, step4: false });
             return;
         }
-
-        // 只有選擇檔案（等待解析）：展開設定
         if (isFileSelected && !isExtracted) {
             setOpenSections({ step1: false, step2: true, step3: false, step4: false });
             return;
         }
-
-        // 初始狀態
         setOpenSections({ step1: true, step2: false, step3: false, step4: false });
     }, [isFileSelected, isExtracted, hasTranslation, isFinished]);
 
@@ -121,19 +115,19 @@ export function Sidebar({
     return (
         <section className="panel panel-left" ref={sidebarRef}>
             <div className="panel-header">
-                <h2>引導導航</h2>
-                <p>請依序完成各項配置</p>
+                <h2>{t("nav.title")}</h2>
+                <p>{t("nav.subtitle")}</p>
             </div>
 
             <div className="sidebar-scrollable-content">
-                {/* Step 1: 上傳檔案 */}
+                {/* Step 1: Upload */}
                 <div className={`accordion-section ${openSections.step1 ? "is-open" : ""} ${isFileSelected ? "is-done" : ""}`}>
                     <div className="accordion-header" onClick={() => toggleSection("step1")}>
                         <div className="flex items-center gap-2">
                             <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] ${isFileSelected ? "bg-blue-100 text-blue-600" : "bg-slate-200 text-slate-500"}`}>
                                 {isFileSelected ? "✓" : "1"}
                             </span>
-                            <span className="step-label">上傳檔案</span>
+                            <span className="step-label">{t("nav.step1")}</span>
                         </div>
                         <span className="accordion-indicator">▼</span>
                     </div>
@@ -144,10 +138,10 @@ export function Sidebar({
                                     <span className="icon">{isFileSelected ? "📄" : "📁"}</span>
                                     <div className="flex flex-col items-center">
                                         <span className="text-main">
-                                            {isFileSelected ? file.name : "選擇或拖放 PPTX 檔案"}
+                                            {isFileSelected ? file.name : t("sidebar.upload.placeholder")}
                                         </span>
-                                        {!isFileSelected && <span className="text-sub">支援微軟 PowerPoint (.pptx)</span>}
-                                        {isFileSelected && <span className="text-sub text-blue-600">✓ 已就緒</span>}
+                                        {!isFileSelected && <span className="text-sub">{t("sidebar.upload.limit")}</span>}
+                                        {isFileSelected && <span className="text-sub text-blue-600">{t("sidebar.upload.ready")}</span>}
                                     </div>
                                     <input
                                         className="file-input-hidden"
@@ -161,14 +155,14 @@ export function Sidebar({
                     </div>
                 </div>
 
-                {/* Step 2: 設定 */}
+                {/* Step 2: Settings */}
                 <div className={`accordion-section ${openSections.step2 ? "is-open" : ""} ${isExtracted ? "is-done" : ""}`}>
                     <div className="accordion-header" onClick={() => toggleSection("step2")}>
                         <div className="flex items-center gap-2">
                             <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] ${isExtracted ? "bg-blue-100 text-blue-600" : "bg-slate-200 text-slate-500"}`}>
                                 {isExtracted ? "✓" : "2"}
                             </span>
-                            <span className="step-label">偏好設定</span>
+                            <span className="step-label">{t("nav.step2")}</span>
                         </div>
                         <span className="accordion-indicator">▼</span>
                     </div>
@@ -176,12 +170,12 @@ export function Sidebar({
                         <div className="space-y-4 pt-2">
                             <div className="row-group">
                                 <div className="form-group">
-                                    <label className="field-label">模式</label>
+                                    <label className="field-label">{t("sidebar.mode.label")}</label>
                                     <CustomSelect
                                         options={[
-                                            { value: "bilingual", label: "雙語輸出" },
-                                            { value: "translated", label: "翻譯文件" },
-                                            { value: "correction", label: "校正模式" }
+                                            { value: "bilingual", label: t("sidebar.mode.bilingual") },
+                                            { value: "translated", label: t("sidebar.mode.translated") },
+                                            { value: "correction", label: t("sidebar.mode.correction") }
                                         ]}
                                         value={mode}
                                         onChange={(e) => setMode(e.target.value)}
@@ -189,12 +183,12 @@ export function Sidebar({
                                 </div>
                                 {mode === "bilingual" && (
                                     <div className="form-group">
-                                        <label className="field-label">版面</label>
+                                        <label className="field-label">{t("sidebar.layout.label")}</label>
                                         <CustomSelect
                                             options={[
-                                                { value: "inline", label: "同框" },
-                                                { value: "auto", label: "自動" },
-                                                { value: "new_slide", label: "新頁" }
+                                                { value: "inline", label: t("sidebar.layout.inline") },
+                                                { value: "auto", label: t("sidebar.layout.auto") },
+                                                { value: "new_slide", label: t("sidebar.layout.new_slide") }
                                             ]}
                                             value={bilingualLayout}
                                             onChange={(e) => setBilingualLayout(e.target.value)}
@@ -204,7 +198,7 @@ export function Sidebar({
                             </div>
 
                             <div className="form-group">
-                                <label className="field-label">語言設定</label>
+                                <label className="field-label">{t("sidebar.lang.label")}</label>
                                 <div className="row-group-3">
                                     <CustomSelect
                                         options={languageOptions || []}
@@ -222,91 +216,89 @@ export function Sidebar({
 
                             <label className="toggle-check">
                                 <input type="checkbox" checked={useTm} onChange={(e) => setUseTm(e.target.checked)} />
-                                使用翻譯記憶庫
+                                {t("sidebar.tm")}
                             </label>
 
                             {isExtracted && (
-                                <p className="field-hint">✓ 已自動解析 {blockCount} 個區塊</p>
+                                <p className="field-hint">{t("sidebar.extract.summary", { count: blockCount })}</p>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Step 3: 翻譯 */}
+                {/* Step 3: Translate */}
                 <div className={`accordion-section ${openSections.step3 ? "is-open" : ""} ${hasTranslation ? "is-done" : ""}`}>
                     <div className="accordion-header" onClick={() => toggleSection("step3")}>
                         <div className="flex items-center gap-2">
                             <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] ${hasTranslation ? "bg-blue-100 text-blue-600" : "bg-slate-200 text-slate-500"}`}>
                                 {hasTranslation ? "✓" : "3"}
                             </span>
-                            <span className="step-label">翻譯執行</span>
+                            <span className="step-label">{t("nav.step3")}</span>
                         </div>
                         <span className="accordion-indicator">▼</span>
                     </div>
                     <div className="accordion-content" style={{ maxHeight: openSections.step3 ? "400px" : "0", opacity: openSections.step3 ? 1 : 0 }}>
                         <div className="py-2 flex flex-col gap-3">
-                            {/* 智慧提取核心術語庫 */}
                             <div className="smart-extract-section">
-                                <p className="field-label mb-2">數據預處理</p>
+                                <p className="field-label mb-2">{t("sidebar.preprocess")}</p>
                                 <button
                                     className="btn secondary w-full"
                                     onClick={onExtractGlossary}
                                     disabled={busy || !isExtracted}
                                 >
-                                    📊 智慧提取核心術語庫
+                                    {t("sidebar.extract.button")}
                                 </button>
-                                <p className="field-hint mt-1">預先分析簡報內容，設定專業名詞以確保翻譯一致</p>
+                                <p className="field-hint mt-1">{t("sidebar.extract.hint")}</p>
                             </div>
 
                             <hr className="border-slate-200" />
 
-                            {/* AI 翻譯 */}
                             <button
-                                className={`btn primary w-full ${isExtracted && !status.includes("翻譯") ? "pulse-shadow" : ""}`}
+                                className={`btn primary w-full ${isExtracted && !isTranslating ? "pulse-shadow" : ""}`}
                                 onClick={onTranslate}
                                 disabled={busy || !isExtracted}
                             >
-                                {status.includes("翻譯") ? "AI 執行中..." : "🚀 開始 AI 自動翻譯"}
+                                {isTranslating ? (
+                                    typeof status === 'string' ? status : (status?.key ? t(status.key, status.params) : "")
+                                ) : t("sidebar.translate.button")}
                             </button>
                             {!isExtracted && (
-                                <p className="field-hint text-center">請先完成步驟 1-2</p>
+                                <p className="field-hint text-center">{t("sidebar.hint.step12")}</p>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Step 4: 下載 */}
+                {/* Step 4: Download */}
                 <div className={`accordion-section ${openSections.step4 ? "is-open" : ""} ${isFinished ? "is-done" : ""}`}>
                     <div className="accordion-header" onClick={() => toggleSection("step4")}>
                         <div className="flex items-center gap-2">
                             <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] ${isFinished ? "bg-blue-100 text-blue-600" : "bg-slate-200 text-slate-500"}`}>
                                 {isFinished ? "✓" : "4"}
                             </span>
-                            <span className="step-label">完成下載</span>
+                            <span className="step-label">{t("nav.step4")}</span>
                         </div>
                         <span className="accordion-indicator">▼</span>
                     </div>
                     <div className="accordion-content" style={{ maxHeight: openSections.step4 ? "400px" : "0", opacity: openSections.step4 ? 1 : 0 }}>
                         <div className="py-2 flex flex-col gap-3">
-                            {/* Primary: PPTX */}
                             <button className="btn success w-full" onClick={onApply} disabled={!canApply}>
-                                📊 套用排版並下載 PPTX
+                                {t("sidebar.apply.button")}
                             </button>
 
-                            {/* Secondary export formats */}
                             {canApply && (
                                 <div className="export-alternatives">
-                                    <p className="field-label mb-2">其他格式</p>
+                                    <p className="field-label mb-2">{t("sidebar.export.others")}</p>
                                     <div className="flex gap-2 flex-wrap">
-                                        <ExportButton format="docx" label="📝 DOCX" blocks={blocks} disabled={!canApply} />
-                                        <ExportButton format="xlsx" label="📈 XLSX" blocks={blocks} disabled={!canApply} />
-                                        <ExportButton format="txt" label="📄 TXT" blocks={blocks} disabled={!canApply} />
+                                        <ExportButton format="docx" label="DOCX" blocks={blocks} disabled={!canApply} />
+                                        <ExportButton format="xlsx" label="XLSX" blocks={blocks} disabled={!canApply} />
+                                        <ExportButton format="txt" label="TXT" blocks={blocks} disabled={!canApply} />
                                     </div>
                                 </div>
                             )}
 
                             {!canApply && (
-                                <p className="field-hint text-center">請先完成翻譯</p>
+                                <p className="field-hint text-center">{t("sidebar.hint.step3")}</p>
                             )}
                         </div>
                     </div>

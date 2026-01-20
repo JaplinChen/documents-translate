@@ -1,10 +1,12 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Quality Badge Component
  * Displays a visual indicator of translation quality score
  */
 export function QualityBadge({ score, issues = [], compact = false }) {
+    const { t } = useTranslation();
     if (!score && score !== 0) return null;
 
     const getColor = (s) => {
@@ -14,11 +16,11 @@ export function QualityBadge({ score, issues = [], compact = false }) {
     };
 
     const getLabel = (s) => {
-        if (s >= 9) return "優秀";
-        if (s >= 8) return "良好";
-        if (s >= 6) return "尚可";
-        if (s >= 4) return "待改進";
-        return "需審核";
+        if (s >= 9) return t("components.quality_badge.excellent");
+        if (s >= 8) return t("components.quality_badge.good");
+        if (s >= 6) return t("components.quality_badge.fair");
+        if (s >= 4) return t("components.quality_badge.poor");
+        return t("components.quality_badge.review");
     };
 
     const colors = getColor(score);
@@ -27,7 +29,7 @@ export function QualityBadge({ score, issues = [], compact = false }) {
         return (
             <span
                 className="quality-badge-compact"
-                title={`品質分數: ${score}/10\n${issues.join("\n")}`}
+                title={`${t("components.quality_badge.score_label")}: ${score}/10\n${issues.join("\n")}`}
                 style={{
                     display: "inline-flex",
                     alignItems: "center",

@@ -11,6 +11,15 @@ export const API_BASE = (typeof import.meta.env.VITE_API_BASE === "string" && im
 export const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
 
 /**
+ * Common Ollama Base URLs
+ */
+export const OLLAMA_BASE_URLS = [
+    "http://127.0.0.1:11434",
+    "http://localhost:11434",
+    "http://host.docker.internal:11434"
+];
+
+/**
  * Default LLM provider
  */
 export const DEFAULT_LLM_PROVIDER = "ollama";
@@ -53,3 +62,18 @@ export const FRAME_MODE_OPTIONS = [
     { value: "same", label: "同框" },
     { value: "separate", label: "分框" }
 ];
+
+/**
+ * Application Processing Status Enum
+ * Used for deterministic UI state management independent of display language
+ */
+export const APP_STATUS = {
+    IDLE: "idle",
+    UPLOADING: "uploading",
+    EXTRACTING: "extracting",
+    TRANSLATING: "translating",
+    EXPORTING: "exporting",
+    TRANSLATION_COMPLETED: "translation_completed",
+    EXPORT_COMPLETED: "export_completed",
+    ERROR: "error"
+};
