@@ -16,6 +16,7 @@ services:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
       - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-180}
+      - OLLAMA_NUM_CTX=${OLLAMA_NUM_CTX:-8192}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
       - GEMINI_TIMEOUT=${GEMINI_TIMEOUT:-180}
@@ -25,9 +26,9 @@ services:
       - SOURCE_LANGUAGE=${SOURCE_LANGUAGE:-auto}
       - LLM_CONTEXT_STRATEGY=${LLM_CONTEXT_STRATEGY:-none}
       - LLM_FALLBACK_ON_ERROR=${LLM_FALLBACK_ON_ERROR:-0}
-      - LLM_SINGLE_REQUEST=${LLM_SINGLE_REQUEST:-1}
-      - LLM_CHUNK_SIZE=${LLM_CHUNK_SIZE:-40}
-      - LLM_MAX_RETRIES=${LLM_MAX_RETRIES:-2}
+      - LLM_SINGLE_REQUEST=${LLM_SINGLE_REQUEST:-0}
+      - LLM_CHUNK_SIZE=${LLM_CHUNK_SIZE:-50}
+      - LLM_MAX_RETRIES=${LLM_MAX_RETRIES:-3}
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
     volumes:
       - ./data:/app/data
@@ -40,6 +41,15 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 5001 --reload
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+          ignore:
+            - __pycache__
+            - .pytest_cache
 
   frontend:
     build:
@@ -53,6 +63,12 @@ services:
         condition: service_healthy
     volumes:
       - ./frontend:/app/frontend
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend/src
+        - action: rebuild
+          path: ./frontend/public
     restart: unless-stopped
 
 networks:

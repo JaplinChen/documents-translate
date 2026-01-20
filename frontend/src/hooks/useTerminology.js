@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { API_BASE } from "../constants";
+import { useUIStore } from "../store/useUIStore";
+import { useSettingsStore } from "../store/useSettingsStore";
 
 export function useTerminology() {
     const [glossaryItems, setGlossaryItems] = useState([]);
     const [tmItems, setTmItems] = useState([]);
-    const [manageOpen, setManageOpen] = useState(false);
-    const [manageTab, setManageTab] = useState("glossary");
-    const [useTm, setUseTm] = useState(false);
+
+    // Store Integration
+    const { setManageOpen, setManageTab, manageOpen, manageTab } = useUIStore();
+    const { useTm, setUseTm } = useSettingsStore();
 
     const loadGlossary = async () => {
         try {
@@ -190,9 +193,10 @@ export function useTerminology() {
 
     return {
         glossaryItems, tmItems,
-        manageOpen, setManageOpen,
-        manageTab, setManageTab,
         useTm, setUseTm,
+        manageOpen, setManageOpen, // Exposed via store, but can also be accessed directly
+        manageTab, setManageTab,
+
         loadGlossary, loadMemory,
         upsertGlossary, deleteGlossary,
         upsertMemory, deleteMemory,

@@ -79,7 +79,21 @@
         "select_all": "全選",
         "clear_selection": "清除",
         "source_label": "原文",
-        "translate_label": "翻譯"
+        "translate_label": "翻譯",
+        "batch": {
+            "toggle": "批次取代",
+            "toggle_title": "展開批次取代工具",
+            "title": "批次搜尋取代",
+            "find": "搜尋",
+            "find_placeholder": "輸入要搜尋的文字",
+            "replace": "取代為",
+            "replace_placeholder": "輸入取代後的文字",
+            "regex": "正則表達式",
+            "case_sensitive": "區分大小寫",
+            "selected_only": "僅選取的區塊",
+            "replace_all": "全部取代",
+            "result": "已取代 {{count}} 處"
+        }
     },
     "components": {
         "quality_badge": {
@@ -133,7 +147,8 @@
             "llm": "LLM",
             "ai": "AI 智控",
             "correction": "校正",
-            "prompt": "Prompt"
+            "prompt": "Prompt",
+            "fonts": "字體"
         },
         "prompt": {
             "empty": "尚無 Prompt",
@@ -148,6 +163,18 @@
             "translate_json": "翻譯 JSON 提示",
             "system_message": "System 提示",
             "ollama_batch": "Ollama 批次提示"
+        },
+        "fonts": {
+            "title": "字體對應設定",
+            "description": "設定不同語言在 PPTX 輸出時優先使用的字體 (逗號分隔，由左至右優先)。",
+            "lang_code": "語言代碼 (ISO)",
+            "font_list": "字體清單",
+            "lang": "語言",
+            "priority": "優先字體",
+            "no_rules": "尚無設定",
+            "reset": "重置預設值",
+            "reset_confirm": "確定要重置所有字體設定為預設值嗎？",
+            "hint": "這些設定將影響翻譯後 PPTX 文字方塊的字體選擇，有助於解決亂碼或顯示問題。"
         },
         "status": {
             "saving": "儲存中...",
@@ -205,6 +232,16 @@
             "completed": "已完成",
             "error": "錯誤"
         }
+    },
+    "common": {
+        "add": "新增",
+        "update": "更新",
+        "edit": "編輯",
+        "action": "操作",
+        "delete": "刪除",
+        "note": "注意",
+        "cancel": "取消",
+        "confirm": "確認"
     },
     "manage": {
         "title": "資料管理",

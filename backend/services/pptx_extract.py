@@ -79,17 +79,29 @@ def _is_technical_terms_only(text: str) -> bool:
 
     # Split into words
     words = cleaned.split()
+    word_count = len(words)
 
-    # Allow up to 10 words to accommodate term lists
-    if len(words) <= 10:
-        # Check if all words match technical term patterns
-        # 1. All uppercase (SOP, CRM, API)
-        # 2. Title case (Notion, Obsidian, Wiki)
-        # 3. lowercase (wiki, database, tracker)
-        # 4. Mixed case (GraphQL, iOS, macOS)
-        technical_pattern = r"^[A-Z][a-z]*$|^[A-Z]+$|^[a-z]+$|^[A-Z][a-z]*[A-Z][a-zA-Z]*$"
-        if all(re.match(technical_pattern, word) for word in words):
-            return True
+    # Heuristic: True technical term lists are usually short (1-3 words) 
+    # and match specific patterns (ALLCAPS, acronyms, specific product names).
+    # Full sentences with Title Case (e.g., "Welcome to Our System") should NOT be filtered.
+    if word_count > 10:
+        return False
+        
+    # Patterns: 
+    # 1. ALL UPPERCASE (SOP, CRM, API)
+    # 2. MixedCase (GraphQL, iOS, macOS)
+    # 3. Simple TitleCase (Only if 1-3 words, likely a Label/Product)
+    is_all_caps = all(re.match(r"^[A-Z0-9_\-]+$", w) for w in words)
+    is_mixed_case = all(re.match(r"^[A-Z][a-z]*[A-Z][a-zA-Z]*$", w) for w in words)
+    is_title_case = all(re.match(r"^[A-Z][a-z]+$", w) for w in words)
+    is_pure_lower = all(re.match(r"^[a-z]+$", w) for w in words)
+
+    if is_all_caps or is_mixed_case:
+        return True
+    
+    # TitleCase or pure lower is only filtered if very short (likely a UI label or single term)
+    if (is_title_case or is_pure_lower) and word_count <= 1:
+        return True
 
     return False
 
@@ -109,6 +121,11 @@ def _iter_shapes(shapes) -> Iterable:
             continue
 
 
+def emu_to_points(emu: int | float) -> float:
+    """Convert EMU to Points (72 points per inch). 1 Point = 12700 EMUs."""
+    return float(emu) / 12700.0
+
+
 def _iter_textbox_blocks(slide: Slide, slide_index: int) -> Iterable[dict]:
     for shape in _iter_shapes(slide.shapes):
         try:
@@ -119,7 +136,14 @@ def _iter_textbox_blocks(slide: Slide, slide_index: int) -> Iterable[dict]:
             continue
         if not text or _is_numeric_only(text) or _is_technical_terms_only(text):
             continue
-        yield make_block(slide_index, shape.shape_id, "textbox", text)
+        
+        # Extract layout info
+        x = emu_to_points(shape.left)
+        y = emu_to_points(shape.top)
+        w = emu_to_points(shape.width)
+        h = emu_to_points(shape.height)
+
+        yield make_block(slide_index, shape.shape_id, "textbox", text, x=x, y=y, width=w, height=h)
 
 
 def _cell_to_text(cell: _Cell) -> str:
@@ -130,12 +154,19 @@ def _iter_table_blocks(slide: Slide, slide_index: int) -> Iterable[dict]:
     for shape in _iter_shapes(slide.shapes):
         if not shape.has_table:
             continue
+        
+        # Table position (same for all cells in this table for simplification in preview)
+        tx = emu_to_points(shape.left)
+        ty = emu_to_points(shape.top)
+        tw = emu_to_points(shape.width)
+        th = emu_to_points(shape.height)
+
         for row in shape.table.rows:
             for cell in row.cells:
                 text = _cell_to_text(cell)
                 if not text or _is_numeric_only(text) or _is_technical_terms_only(text):
                     continue
-                yield make_block(slide_index, shape.shape_id, "table_cell", text)
+                yield make_block(slide_index, shape.shape_id, "table_cell", text, x=tx, y=ty, width=tw, height=th)
 
 
 def _iter_notes_blocks(slide: Slide, slide_index: int) -> Iterable[dict]:
@@ -150,14 +181,32 @@ def _iter_notes_blocks(slide: Slide, slide_index: int) -> Iterable[dict]:
             continue
         if not text or _is_numeric_only(text) or _is_technical_terms_only(text):
             continue
-        yield make_block(slide_index, shape.shape_id, "notes", text)
+        
+        # Notes position
+        x = emu_to_points(shape.left)
+        y = emu_to_points(shape.top)
+        w = emu_to_points(shape.width)
+        h = emu_to_points(shape.height)
+
+        yield make_block(slide_index, shape.shape_id, "notes", text, x=x, y=y, width=w, height=h)
 
 
-def extract_blocks(pptx_path: str) -> list[dict]:
+def extract_blocks(pptx_path: str) -> dict:
     presentation = Presentation(pptx_path)
     blocks: list[dict] = []
+    
+    # Get slide dimensions in Points
+    slide_width = emu_to_points(presentation.slide_width)
+    slide_height = emu_to_points(presentation.slide_height)
+
     for slide_index, slide in enumerate(presentation.slides):
         blocks.extend(_iter_textbox_blocks(slide, slide_index))
         blocks.extend(_iter_table_blocks(slide, slide_index))
         blocks.extend(_iter_notes_blocks(slide, slide_index))
-    return blocks
+    
+    return {
+        "blocks": blocks,
+        "slide_width": slide_width,
+        "slide_height": slide_height
+    }
+

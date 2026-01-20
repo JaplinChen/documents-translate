@@ -79,7 +79,21 @@
         "select_all": "Select All",
         "clear_selection": "Clear",
         "source_label": "Source",
-        "translate_label": "Target"
+        "translate_label": "Target",
+        "batch": {
+            "toggle": "Batch Replace",
+            "toggle_title": "Expand batch replace tool",
+            "title": "Find & Replace",
+            "find": "Find",
+            "find_placeholder": "Enter text to find",
+            "replace": "Replace with",
+            "replace_placeholder": "Enter replacement text",
+            "regex": "Use Regex",
+            "case_sensitive": "Case Sensitive",
+            "selected_only": "Selected blocks only",
+            "replace_all": "Replace All",
+            "result": "Replaced {{count}} occurrences"
+        }
     },
     "components": {
         "quality_badge": {
@@ -133,7 +147,8 @@
             "llm": "LLM",
             "ai": "AI Control",
             "correction": "Correction",
-            "prompt": "Prompt"
+            "prompt": "Prompt",
+            "fonts": "Fonts"
         },
         "prompt": {
             "empty": "No Prompts",
@@ -148,6 +163,19 @@
             "translate_json": "Translate JSON Prompt",
             "system_message": "System Message",
             "ollama_batch": "Ollama Batch Prompt"
+        },
+        "fonts": {
+            "title": "Font Mapping",
+            "description": "Set priority fonts for different languages in PPTX output (Comma separated, left-to-right priority).",
+            "lang_code": "Lang Code (ISO)",
+            "font_list": "Font List",
+            "lang": "Language",
+            "priority": "Priority Fonts",
+            "no_rules": "No rules set",
+            "reset": "Reset Default",
+            "reset_confirm": "Reset all font rules to default?",
+            "delete_confirm": "Delete this rule?",
+            "hint": "These settings affect font selection in translated text boxes, helping resolve tofu characters or display issues."
         },
         "status": {
             "saving": "Saving...",
@@ -280,6 +308,16 @@
                 "import_fail": "Import failed"
             }
         }
+    },
+    "common": {
+        "add": "Add",
+        "update": "Update",
+        "edit": "Edit",
+        "action": "Actions",
+        "delete": "Delete",
+        "note": "Note",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
     },
     "status": {
         "extracting": "Extracting...",

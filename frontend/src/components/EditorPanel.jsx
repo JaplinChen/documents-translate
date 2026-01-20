@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import BlockCard from "./BlockCard";
+import { BatchReplaceToolbar } from "./BatchReplaceToolbar";
+import { SlidePreview } from "./SlidePreview";
 
 export function EditorPanel({
     blockCount,
@@ -15,6 +17,8 @@ export function EditorPanel({
     onOutputModeChange,
     onAddGlossary,
     onAddMemory,
+    onBatchReplace,
+    slideDimensions,
     mode,
     sourceLang,
     secondaryLang,
@@ -22,6 +26,11 @@ export function EditorPanel({
     editorRefs
 }) {
     const { t } = useTranslation();
+    const [activeBlockId, setActiveBlockId] = useState(null);
+
+    // Filter blocks for the current slide to show in preview
+    const previewSlideIndex = parseInt(filterSlide) - 1;
+    const currentSlideBlocks = filteredBlocks.filter(b => b.slide_index === previewSlideIndex);
 
     return (
         <section className="panel panel-right">
@@ -70,26 +79,54 @@ export function EditorPanel({
                         <div className="filter-actions flex gap-2 ml-auto">
                             <button className="btn ghost compact" type="button" onClick={onSelectAll}>{t("editor.select_all")}</button>
                             <button className="btn ghost compact" type="button" onClick={onClearSelection}>{t("editor.clear_selection")}</button>
+                            {onBatchReplace && (
+                                <BatchReplaceToolbar onReplace={onBatchReplace} disabled={blockCount === 0} />
+                            )}
                         </div>
                     </div>
 
+                    {/* High-Fidelity Preview Integration */}
+                    {slideDimensions?.width > 0 ? (
+                        currentSlideBlocks.length > 0 ? (
+                            <div className="editor-preview-section p-4 bg-slate-50 border-b border-slate-200">
+                                <SlidePreview
+                                    dimensions={slideDimensions}
+                                    blocks={currentSlideBlocks}
+                                    activeBlockId={activeBlockId}
+                                />
+                            </div>
+                        ) : (
+                            <div className="editor-preview-guidance p-4 bg-slate-50 border-b border-slate-200 text-center">
+                                <p className="text-xs text-slate-400">
+                                    💡 {t("editor.preview_guidance", "Enter a Slide Number in the filter above to see a layout preview.")}
+                                </p>
+                            </div>
+                        )
+                    ) : null}
+
                     <div className="block-list">
                         {(filteredBlocks || []).map((block, index) => (
-                            <BlockCard
+                            <div
                                 key={block._uid}
-                                block={block}
-                                index={index}
-                                mode={mode}
-                                sourceLang={sourceLang}
-                                secondaryLang={secondaryLang}
-                                extractLanguageLines={extractLanguageLines}
-                                editorRefs={editorRefs}
-                                onBlockSelect={(checked) => onBlockSelect(block._uid, checked)}
-                                onBlockChange={(val) => onBlockChange(block._uid, val)}
-                                onOutputModeChange={(val) => onOutputModeChange(block._uid, val)}
-                                onAddGlossary={() => onAddGlossary(block)}
-                                onAddMemory={() => onAddMemory(block)}
-                            />
+                                onMouseEnter={() => setActiveBlockId(block._uid)}
+                                onMouseLeave={() => setActiveBlockId(null)}
+                                className={activeBlockId === block._uid ? "ring-2 ring-blue-500 rounded-lg" : ""}
+                            >
+                                <BlockCard
+                                    block={block}
+                                    index={index}
+                                    mode={mode}
+                                    sourceLang={sourceLang}
+                                    secondaryLang={secondaryLang}
+                                    extractLanguageLines={extractLanguageLines}
+                                    editorRefs={editorRefs}
+                                    onBlockSelect={(checked) => onBlockSelect(block._uid, checked)}
+                                    onBlockChange={(val) => onBlockChange(block._uid, val)}
+                                    onOutputModeChange={(val) => onOutputModeChange(block._uid, val)}
+                                    onAddGlossary={() => onAddGlossary(block)}
+                                    onAddMemory={() => onAddMemory(block)}
+                                />
+                            </div>
                         ))}
                     </div>
                 </>
@@ -97,3 +134,5 @@ export function EditorPanel({
         </section>
     );
 }
+
+

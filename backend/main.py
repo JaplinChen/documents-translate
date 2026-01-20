@@ -1,4 +1,8 @@
-from fastapi import FastAPI
+import asyncio
+import time
+import shutil
+from pathlib import Path
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api import (
@@ -18,6 +22,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(pptx_router)
@@ -28,6 +33,31 @@ app.include_router(prompt_router)
 app.include_router(preserve_terms_router)
 app.include_router(token_stats_router)
 app.include_router(export_router)
+
+
+async def cleanup_exports_task():
+    """Background task to remove old export files (older than 1 hour)."""
+    export_dir = Path("data/exports")
+    while True:
+        try:
+            if export_dir.exists():
+                now = time.time()
+                for item in export_dir.iterdir():
+                    if item.is_file() and now - item.stat().st_mtime > 1800:
+                        item.unlink()
+                        # Try to remove corresponding json/pptx if it exists 
+                        # (unlink handles single file, this loop will catch both eventually)
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        await asyncio.sleep(1800)  # Run every 30 mins
+
+
+@app.on_event("startup")
+async def startup_event():
+    # Ensure exports directory exists
+    Path("data/exports").mkdir(parents=True, exist_ok=True)
+    # Start cleanup task
+    asyncio.create_task(cleanup_exports_task())
 
 
 @app.get("/health")

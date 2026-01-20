@@ -14,6 +14,12 @@ class PPTXBlock(BaseModel):
     translated_text: str = ""
     client_id: str | None = None
     mode: Literal["direct", "bilingual", "correction"] = "direct"
+    # Layout info (in Points)
+    x: float = 0.0
+    y: float = 0.0
+    width: float = 0.0
+    height: float = 0.0
+
 
 
 class PPTXExtractResponse(BaseModel):
@@ -39,6 +45,10 @@ def make_block(
     source_text: str,
     translated_text: str = "",
     mode: Literal["direct", "bilingual", "correction"] = "direct",
+    x: float = 0.0,
+    y: float = 0.0,
+    width: float = 0.0,
+    height: float = 0.0,
 ) -> dict:
     block = PPTXBlock(
         slide_index=slide_index,
@@ -47,8 +57,13 @@ def make_block(
         source_text=source_text,
         translated_text=translated_text,
         mode=mode,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
     )
     return _model_dump(block)
+
 
 
 def coerce_blocks(blocks: Iterable[dict]) -> list[dict]:

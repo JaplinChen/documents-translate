@@ -1,270 +1,128 @@
-#!/usr/bin/env python3
-"""
-專案清理腳本 - Codebase Cleanup Script
-
-此腳本用於清理專案中的快取、暫存檔案與建置產出。
-預設啟用 DRY-RUN 模式，僅列出將被刪除的項目而不實際刪除。
-
-使用方式:
-    python scripts/cleanup_project.py           # Dry-run 模式 (預覽)
-    python scripts/cleanup_project.py --execute # 實際執行刪除
-
-作者: Automated by Codebase Cleanup Audit
-日期: 2026-01-16
-"""
-
-from __future__ import annotations
-
-import argparse
+import os
 import shutil
-from collections.abc import Callable
+import sys
 from pathlib import Path
 
-# 專案根目錄
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Configuration
+DRY_RUN = True  # Safety first
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
-
-# ============================================================
-# 要清理的項目定義
-# ============================================================
-
-# [CACHE] 快取目錄名稱 - 可安全刪除
-CACHE_DIR_NAMES: set[str] = {
+# Targets to clean
+CACHE_DIRS = [
     "__pycache__",
     ".pytest_cache",
-    ".mypy_cache",
     ".ruff_cache",
-}
-
-# [CACHE] 建置產出目錄 - 相對於專案根目錄的路徑
-BUILD_DIRS: list[str] = [
-    "frontend/dist",
+    ".mypy_cache",
+    "build",
+    "dist",
+    ".git_corrupted_backup"
 ]
 
-# [TEMP] 暫存檔案模式
-TEMP_FILE_PATTERNS: list[tuple[str, str]] = [
-    ("*.log", "Log 檔案"),
-    ("*.tmp", "暫存檔"),
-    ("*.bak", "備份檔"),
-    (".DS_Store", "macOS 系統檔案"),
+TEMP_FILES = [
+    "*.log",
+    "*.tmp",
+    "*.bak",
+    ".DS_Store",
+    "backend_logs.txt",
+    "inspect_output.txt",
+    "overlap_debug*.txt",
+    "shape_xml_debug.txt",
+    "README.txt"
 ]
 
-# [TEMP] 暫存目錄 - 相對於專案根目錄的路徑
-TEMP_DIRS: list[str] = [
-    # "tmp",  # 註解掉：可能包含使用者的測試資料，需手動清理
-]
+def confirm(prompt):
+    while True:
+        choice = input(f"{prompt} [y/N]: ").lower()
+        if choice in ('y', 'yes'):
+            return True
+        if choice in ('n', 'no', ''):
+            return False
 
-# 排除的目錄（不進入這些目錄進行掃描）
-EXCLUDED_DIRS: set[str] = {
-    ".git",
-    "node_modules",
-    ".venv",
-    "venv",
-    ".codex",
-}
+def cleanup():
+    print(f"Cleaning up project at: {PROJECT_ROOT}")
+    if DRY_RUN:
+        print(" [DRY RUN MODE] No files will be actually deleted.\n")
 
+    files_to_remove = []
+    dirs_to_remove = []
 
-# ============================================================
-# 清理函數
-# ============================================================
+    # Scan for directories
+    for root, dirs, files in os.walk(PROJECT_ROOT):
+        # Skip .git, .venv, and node_modules to prevent accidents (and speed up)
+        if ".git" in dirs:
+            dirs.remove(".git")
+        if ".venv" in dirs:
+            dirs.remove(".venv")
+        if "node_modules" in dirs:
+            dirs.remove("node_modules")
+            
+        for d in dirs:
+            if d in CACHE_DIRS:
+                dirs_to_remove.append(Path(root) / d)
+        
+        # Check files
+        for f in files:
+            p = Path(root) / f
+            # Exact match check
+            if f in TEMP_FILES:
+                 files_to_remove.append(p)
+                 continue
+            
+            # Pattern match check
+            from fnmatch import fnmatch
+            for pattern in TEMP_FILES:
+                if fnmatch(f, pattern):
+                    files_to_remove.append(p)
+                    break
 
+    # Summary
+    print(f"Found {len(dirs_to_remove)} directories and {len(files_to_remove)} files to clean.")
+    
+    if not dirs_to_remove and not files_to_remove:
+        print("Nothing to clean. All good!")
+        return
 
-def find_items(
-    root: Path,
-    condition: Callable[[Path], bool],
-    *,
-    follow_symlinks: bool = False,
-) -> list[Path]:
-    """遞迴搜尋符合條件的項目。"""
-    found: list[Path] = []
+    # List items
+    if dirs_to_remove:
+        print("\nDirectories to remove:")
+        for d in dirs_to_remove:
+            print(f"  [DIR]  {d.relative_to(PROJECT_ROOT)}")
 
-    def should_skip_dir(path: Path) -> bool:
-        return path.name in EXCLUDED_DIRS
+    if files_to_remove:
+        print("\nFiles to remove:")
+        for f in files_to_remove:
+            print(f"  [FILE] {f.relative_to(PROJECT_ROOT)}")
 
-    for entry in root.iterdir():
-        if entry.is_symlink() and not follow_symlinks:
-            continue
+    print("-" * 40)
+    
+    if DRY_RUN:
+        print("\nTo execute, run this script with --force or set DRY_RUN=False in code.")
+        print("Or I can prompt you now if you want to proceed despite dry run flag?")
+        if not confirm("Proceed with DELETION?"):
+            print("Aborted.")
+            return
 
-        if entry.is_dir():
-            if should_skip_dir(entry):
-                continue
-            if condition(entry):
-                found.append(entry)
-            else:
-                found.extend(find_items(entry, condition))
-        elif entry.is_file() and condition(entry):
-            found.append(entry)
-
-    return found
-
-
-def find_cache_dirs(root: Path) -> list[Path]:
-    """找出所有快取目錄。"""
-    return find_items(root, lambda p: p.is_dir() and p.name in CACHE_DIR_NAMES)
-
-
-def find_temp_files(root: Path) -> list[Path]:
-    """找出所有暫存檔案。"""
-    results: list[Path] = []
-    for pattern, _ in TEMP_FILE_PATTERNS:
-        if pattern.startswith("*."):
-            # 擴展名模式
-            ext = pattern[1:]  # ".log"
-            results.extend(find_items(root, lambda p, e=ext: p.is_file() and p.suffix == e))
-        else:
-            # 完整檔名模式
-            results.extend(find_items(root, lambda p, name=pattern: p.is_file() and p.name == name))
-    return results
-
-
-def get_build_dirs(root: Path) -> list[Path]:
-    """取得要清理的建置目錄。"""
-    return [root / d for d in BUILD_DIRS if (root / d).exists()]
-
-
-def get_temp_dirs(root: Path) -> list[Path]:
-    """取得要清理的暫存目錄。"""
-    return [root / d for d in TEMP_DIRS if (root / d).exists()]
-
-
-def format_size(size_bytes: int) -> str:
-    """格式化檔案大小。"""
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
-        return f"{size_bytes / 1024:.1f} KB"
-    else:
-        return f"{size_bytes / (1024 * 1024):.1f} MB"
-
-
-def get_total_size(paths: list[Path]) -> int:
-    """計算總大小。"""
-    total = 0
-    for path in paths:
-        if path.is_file():
-            total += path.stat().st_size
-        elif path.is_dir():
-            for file in path.rglob("*"):
-                if file.is_file():
-                    total += file.stat().st_size
-    return total
-
-
-def delete_paths(paths: list[Path], *, dry_run: bool = True) -> int:
-    """刪除指定路徑，回傳刪除的項目數量。"""
-    deleted = 0
-    for path in paths:
+    # Execution
+    print("\nDeleting...")
+    for d in dirs_to_remove:
         try:
-            if dry_run:
-                print(f"  [DRY-RUN] 將刪除: {path}")
-            else:
-                if path.is_file():
-                    path.unlink()
-                elif path.is_dir():
-                    shutil.rmtree(path)
-                print(f"  [已刪除] {path}")
-            deleted += 1
-        except (OSError, PermissionError) as e:
-            print(f"  [錯誤] 無法刪除 {path}: {e}")
-    return deleted
+            if d.exists():
+                shutil.rmtree(d)
+                print(f"Deleted: {d.name}")
+        except Exception as e:
+            print(f"Error deleting {d}: {e}")
 
+    for f in files_to_remove:
+        try:
+            if f.exists():
+                os.remove(f)
+                print(f"Deleted: {f.name}")
+        except Exception as e:
+            print(f"Error deleting {f}: {e}")
 
-# ============================================================
-# 主程式
-# ============================================================
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="專案清理腳本 - 清理快取、暫存檔案與建置產出",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-範例:
-    python scripts/cleanup_project.py              # 預覽模式 (Dry-run)
-    python scripts/cleanup_project.py --execute    # 實際執行刪除
-    python scripts/cleanup_project.py --no-confirm # 跳過確認 (適合 CI/CD)
-        """,
-    )
-    parser.add_argument(
-        "--execute",
-        action="store_true",
-        help="實際執行刪除 (預設為 dry-run 模式)",
-    )
-    parser.add_argument(
-        "--no-confirm",
-        action="store_true",
-        help="跳過刪除前的確認提示 (適合 CI/CD)",
-    )
-    args = parser.parse_args()
-
-    dry_run = not args.execute
-
-    print("=" * 60)
-    print("專案清理腳本 - Codebase Cleanup")
-    print(f"專案目錄: {PROJECT_ROOT}")
-    print(f"執行模式: {'DRY-RUN (預覽)' if dry_run else '實際刪除'}")
-    print("=" * 60)
-    print()
-
-    # 收集所有要清理的項目
-    all_items: dict[str, list[Path]] = {
-        "[CACHE] 快取目錄": find_cache_dirs(PROJECT_ROOT),
-        "[BUILD] 建置目錄": get_build_dirs(PROJECT_ROOT),
-        "[TEMP] 暫存檔案": find_temp_files(PROJECT_ROOT),
-        "[TEMP] 暫存目錄": get_temp_dirs(PROJECT_ROOT),
-    }
-
-    total_items = 0
-    total_size = 0
-
-    for category, items in all_items.items():
-        if items:
-            size = get_total_size(items)
-            total_size += size
-            print(f"\n{category} ({len(items)} 項, {format_size(size)}):")
-            for item in sorted(items):
-                rel_path = item.relative_to(PROJECT_ROOT)
-                if item.is_file():
-                    file_size = format_size(item.stat().st_size)
-                    print(f"  - {rel_path} ({file_size})")
-                else:
-                    dir_size = format_size(get_total_size([item]))
-                    print(f"  - {rel_path}/ ({dir_size})")
-            total_items += len(items)
-
-    if total_items == 0:
-        print("\n✨ 專案非常乾淨，沒有需要清理的項目！")
-        return 0
-
-    print("\n" + "-" * 60)
-    print(f"總計: {total_items} 項, 約 {format_size(total_size)}")
-    print("-" * 60)
-
-    if dry_run:
-        print("\n📋 這是 DRY-RUN 模式，未實際刪除任何檔案。")
-        print("   若確認要執行清理，請加上 --execute 參數重新執行。")
-        return 0
-
-    # 實際執行模式 - 確認刪除
-    if not args.no_confirm:
-        print("\n⚠️  警告: 即將刪除上述檔案與目錄！")
-        confirm = input("是否確認刪除？請輸入 'YES' 進行確認: ")
-        if confirm != "YES":
-            print("已取消操作。")
-            return 0
-
-    print("\n🗑️  開始清理...")
-    deleted_count = 0
-    for category, items in all_items.items():
-        if items:
-            print(f"\n{category}:")
-            deleted_count += delete_paths(items, dry_run=False)
-
-    print("\n" + "=" * 60)
-    print(f"✅ 清理完成！共刪除 {deleted_count} 個項目")
-    print("=" * 60)
-    return 0
-
+    print("\nCleanup Complete.")
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    if "--force" in sys.argv:
+        DRY_RUN = False
+    cleanup()

@@ -12,6 +12,8 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+import httpx
+
 from backend.config import settings
 from backend.services.llm_clients import MockTranslator
 from backend.services.llm_context import build_context
@@ -214,7 +216,25 @@ async def translate_blocks_async(
     )
 
     if tasks:
-        await asyncio.gather(*tasks)
+        # Wrap tasks with a semaphore if it's Ollama to prevent overloading
+        final_tasks = tasks
+        if resolved_provider == "ollama":
+            # Ollama usually benefits from lower concurrency to maximize throughput per request
+            sem = asyncio.Semaphore(2)
+
+            async def sem_wrapped_task(task):
+                async with sem:
+                    return await task
+
+            final_tasks = [sem_wrapped_task(t) for t in tasks]
+
+        # Use a shared httpx.AsyncClient for connection pooling if supported
+        if hasattr(translator, "set_async_client"):
+            async with httpx.AsyncClient(timeout=settings.ollama_timeout) as client:
+                translator.set_async_client(client)
+                await asyncio.gather(*final_tasks)
+        else:
+            await asyncio.gather(*final_tasks)
 
     final_texts = [text if text is not None else "" for text in translated_texts]
     return build_contract(

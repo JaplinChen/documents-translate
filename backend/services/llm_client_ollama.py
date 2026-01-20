@@ -46,6 +46,11 @@ class OllamaTranslator:
     def __init__(self, model: str, base_url: str) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
+        self._async_client: httpx.AsyncClient | None = None
+
+    def set_async_client(self, client: httpx.AsyncClient) -> None:
+        """Set an external async client for connection pooling."""
+        self._async_client = client
 
     def _post(self, endpoint: str, payload: dict) -> dict:
         """Make POST request to Ollama API (Synchronous)."""
@@ -66,6 +71,11 @@ class OllamaTranslator:
         """Make POST request to Ollama API (Asynchronous)."""
         url = f"{self.base_url}{endpoint}"
         try:
+            if self._async_client is not None:
+                response = await self._async_client.post(url, json=payload, timeout=settings.ollama_timeout)
+                response.raise_for_status()
+                return response.json()
+
             async with httpx.AsyncClient(timeout=settings.ollama_timeout) as client:
                 response = await client.post(url, json=payload)
                 response.raise_for_status()

@@ -8,6 +8,7 @@
 - docker logs/ps/exec
 - docker-compose up/down/restart/logs/ps/build
 - docker-compose up -d --build
+- npm test 2>&1
 
 **讀取類命令：**
 

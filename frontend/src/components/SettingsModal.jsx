@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import LlmTab from "./settings/LlmTab";
 import CorrectionTab from "./settings/CorrectionTab";
 import PromptTab from "./settings/PromptTab";
+
 import AiTab from "./settings/AiTab";
+import { FontSettings } from "./settings/FontSettings";
 
 const PROVIDERS = [
   { id: "ollama", name: "Ollama", subKey: "ollama", icon: "💻" },
@@ -49,7 +51,9 @@ function SettingsModal({
   onExtractGlossary,
   busy,
   status,
-  apiBase
+  apiBase,
+  fontMapping,
+  setFontMapping
 }) {
   const { t } = useTranslation();
   const [showKey, setShowKey] = useState(false);
@@ -162,7 +166,7 @@ function SettingsModal({
           <aside className="settings-sidebar">
             <h4 className="sidebar-title">{t("settings.title")}</h4>
             <div className="sidebar-tabs">
-              {["llm", "ai", "correction", "prompt"].map((tKey) => (
+              {["llm", "ai", "fonts", "correction", "prompt"].map((tKey) => (
                 <button
                   key={tKey}
                   className={`sidebar-tab ${tab === tKey ? "active" : ""}`}
@@ -225,6 +229,7 @@ function SettingsModal({
               <div className="header-title">
                 {tab === "llm" && <h3>{currentProvider.name} {t("settings.title")}</h3>}
                 {tab === "ai" && <h3>{t("settings.tabs.ai")}</h3>}
+                {tab === "fonts" && <h3>{t("settings.tabs.fonts")}</h3>}
                 {tab === "correction" && <h3>{t("settings.tabs.correction")} {t("settings.title")}</h3>}
                 {tab === "prompt" && <h3>{t("settings.tabs.prompt")} {t("settings.title")}</h3>}
               </div>
@@ -273,6 +278,12 @@ function SettingsModal({
                   onExtractGlossary={onExtractGlossary}
                   busy={busy}
                   status={status}
+                />
+              )}
+              {tab === "fonts" && (
+                <FontSettings
+                  fontMapping={fontMapping}
+                  setFontMapping={setFontMapping}
                 />
               )}
               {tab === "correction" && (

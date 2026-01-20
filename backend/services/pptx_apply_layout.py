@@ -11,10 +11,29 @@ from pptx.enum.text import MSO_AUTO_SIZE
 from pptx.slide import Slide
 from pptx.text.text import TextFrame
 
-from backend.services.pptx_apply_text import apply_font_spec
+
+def capture_font_spec(text_frame: TextFrame) -> dict[str, Any]:
+    """Captures font specs from the first run of the first paragraph."""
+    spec = {
+        "name": None,
+        "size": None,
+        "bold": None,
+        "italic": None,
+    }
+    try:
+        if text_frame.paragraphs and text_frame.paragraphs[0].runs:
+            run = text_frame.paragraphs[0].runs[0]
+            spec["name"] = run.font.name
+            spec["size"] = run.font.size
+            spec["bold"] = run.font.bold
+            spec["italic"] = run.font.italic
+    except Exception:
+        pass
+    return spec
 
 
 def add_overflow_textboxes(
+
     slide: Slide,
     base_shape,
     chunks: list[str],
@@ -39,7 +58,24 @@ def add_overflow_textboxes(
             paragraph = text_frame.paragraphs[0] if line_index == 0 else text_frame.add_paragraph()
             paragraph.text = line
             if paragraph.runs:
-                apply_font_spec(paragraph.runs[0], font_spec or {}, translated_color, scale=0.9)
+                run = paragraph.runs[0]
+                # Apply font spec manually since apply_font_spec is deprecated
+                if font_spec:
+                    if font_spec.get("name"):
+                        run.font.name = font_spec["name"]
+                    if font_spec.get("size"):
+                        # Hardcoded 0.9 scale from original call
+                        run.font.size = int(font_spec["size"] * 0.9)
+                    if font_spec.get("bold") is not None:
+                        run.font.bold = font_spec["bold"]
+                    if font_spec.get("italic") is not None:
+                        run.font.italic = font_spec["italic"]
+                
+                # Apply color
+                try:
+                    run.font.color.rgb = translated_color
+                except Exception:
+                    pass
 
 
 def duplicate_slide(presentation: Presentation, slide: Slide) -> tuple[Slide, dict[int, int]]:

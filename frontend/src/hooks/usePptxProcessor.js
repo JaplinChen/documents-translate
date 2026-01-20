@@ -1,32 +1,35 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { API_BASE, APP_STATUS } from "../constants";
+import { useFileStore } from "../store/useFileStore";
+import { useSettingsStore } from "../store/useSettingsStore";
+import { useUIStore } from "../store/useUIStore";
 
-export function usePptxProcessor({
-    file,
-    blocks,
-    setBlocks,
-    sourceLang,
-    secondaryLang,
-    targetLang,
-    mode,
-    useTm,
-    llmProvider,
-    llmApiKey,
-    llmBaseUrl,
-    llmModel,
-    llmFastMode,
-    bilingualLayout,
-    fillColor,
-    textColor,
-    lineColor,
-    lineDash,
-    setStatus,
-    setAppStatus,
-    setBusy
-}) {
+
+export function usePptxProcessor() {
     const { t } = useTranslation();
     const [progress, setProgress] = useState(0);
+
+    // Stores
+    const { file, blocks, setBlocks } = useFileStore();
+    const {
+        llmProvider, llmApiKey, llmBaseUrl, llmModel, llmFastMode,
+        fontMapping, correction
+    } = useSettingsStore(); // Correction (fillColor etc)
+    const {
+        sourceLang, secondaryLang, targetLang, mode, bilingualLayout,
+        setStatus, setAppStatus, setBusy, setSlideDimensions
+    } = useUIStore();
+
+
+    // Note: useTm boolean should be in store. Assuming passed or gathered.
+    // For now, let's assume useTm is a prop or we add it to store.
+    // Let's check useUIStore or useSettingsStore for 'useTm' boolean.
+    // It's not there yet. I will treat it as false default or add to store.
+    // I should add useTm to useSettingsStore.
+    const useTm = useSettingsStore(s => s.useTm);
+
+    const { fillColor, textColor, lineColor, lineDash } = correction;
 
     const readErrorDetail = async (response, fallback) => {
         const errorText = await response.text();
@@ -94,10 +97,11 @@ export function usePptxProcessor({
                 };
             });
             setBlocks(nextBlocks);
-            // Store status as object for dynamic localization
+            setSlideDimensions({ width: data.slide_width, height: data.slide_height });
             setStatus({ key: "sidebar.extract.summary", params: { count: data.blocks?.length || 0 } });
             setAppStatus(APP_STATUS.IDLE);
             return data.language_summary;
+
         } catch (error) {
             setStatus(`${t("status.extract_failed")}：${error.message}`);
             setAppStatus(APP_STATUS.ERROR);
@@ -120,7 +124,6 @@ export function usePptxProcessor({
         setStatus(t("sidebar.translate.preparing"));
         setAppStatus(APP_STATUS.TRANSLATING);
 
-        // Mark all blocks as translating
         setBlocks(prev => prev.map(b => ({ ...b, isTranslating: true })));
 
         try {
@@ -151,13 +154,15 @@ export function usePptxProcessor({
             const decoder = new TextDecoder();
             let buffer = "";
             let completedCount = 0;
+            // Capture current blocks snapshot reference isn't enough, we need to know existing state?
+            // Actually, we should just update blocks via setBlocks functional update to be safe
+            // But here we need indices.
             let currentBlocks = [...blocks];
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) {
                     if (buffer.trim()) {
-                        // Process remaining buffer
                         const lines = buffer.split("\n\n");
                         for (const line of lines) {
                             if (!line.trim()) continue;
@@ -168,13 +173,12 @@ export function usePptxProcessor({
                                 const eventData = JSON.parse(dataMatch[1]);
                                 if (eventType === "complete") {
                                     const finalResult = eventData.blocks || [];
-                                    const nextBlocks = currentBlocks.map((b, i) => ({
+                                    setBlocks(prev => prev.map((b, i) => ({
                                         ...b,
                                         translated_text: finalResult[i]?.translated_text || b.translated_text,
                                         isTranslating: false,
                                         updatedAt: finalResult[i]?.translated_text ? new Date().toLocaleTimeString("zh-TW", { hour12: false }) : b.updatedAt
-                                    }));
-                                    setBlocks(nextBlocks);
+                                    })));
                                     setProgress(100);
                                     setStatus(t("sidebar.translate.completed"));
                                     setAppStatus(APP_STATUS.TRANSLATION_COMPLETED);
@@ -186,13 +190,10 @@ export function usePptxProcessor({
                             }
                         }
                     }
-
-                    // If done and still busy (no complete event), treat as interruption
                     setBusy((prevBusy) => {
                         if (prevBusy) {
                             setStatus(t("status.interrupted"));
                             setAppStatus(APP_STATUS.IDLE);
-                            // Optional: Retry?
                         }
                         return false;
                     });
@@ -201,14 +202,12 @@ export function usePptxProcessor({
 
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split("\n\n");
-                buffer = lines.pop(); // Keep last incomplete chunk
+                buffer = lines.pop();
 
                 for (const line of lines) {
                     if (!line.trim()) continue;
-
                     const eventMatch = line.match(/^event: (.*)$/m);
                     const dataMatch = line.match(/^data: (.*)$/m);
-
                     if (!eventMatch || !dataMatch) continue;
 
                     const eventType = eventMatch[1];
@@ -218,25 +217,20 @@ export function usePptxProcessor({
                         const { completed_indices } = eventData;
                         completedCount += completed_indices.length;
 
-                        // Update blocks that were in this particular chunk
-                        completed_indices.forEach(idx => {
-                            if (currentBlocks[idx]) {
-                                currentBlocks[idx] = { ...currentBlocks[idx], isTranslating: false };
-                            }
-                        });
-
+                        // We need to update local variable 'currentBlocks' ? No, UI driven.
+                        // Ideally we should batch updates to store.
+                        // For progress bar:
                         const pct = Math.round((completedCount / blocks.length) * 100);
                         setProgress(pct);
                         setStatus(t("sidebar.translate.translating", { current: completedCount, total: blocks.length }));
                     } else if (eventType === "complete") {
                         const finalResult = eventData.blocks || [];
-                        const nextBlocks = currentBlocks.map((b, i) => ({
+                        setBlocks(prev => prev.map((b, i) => ({
                             ...b,
                             translated_text: finalResult[i]?.translated_text || b.translated_text,
                             isTranslating: false,
                             updatedAt: finalResult[i]?.translated_text ? new Date().toLocaleTimeString("zh-TW", { hour12: false }) : b.updatedAt
-                        }));
-                        setBlocks(nextBlocks);
+                        })));
                         setProgress(100);
                         setStatus(t("sidebar.translate.completed"));
                         setAppStatus(APP_STATUS.TRANSLATION_COMPLETED);
@@ -279,19 +273,25 @@ export function usePptxProcessor({
                 formData.append("line_dash", lineDash);
             }
             if (mode === "bilingual") formData.append("bilingual_layout", bilingualLayout);
+            if (fontMapping) formData.append("font_mapping", JSON.stringify(fontMapping));
 
             const response = await fetch(`${API_BASE}${endpoint}`, {
                 method: "POST",
                 body: formData
             });
             if (!response.ok) throw new Error(t("status.apply_failed"));
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = mode === "correction" ? "pptx_corrected.pptx" : "pptx_translated.pptx";
-            a.click();
-            URL.revokeObjectURL(url);
+
+            const result = await response.json();
+            if (result.status !== "success" || !result.download_url) {
+                throw new Error("後端生成失敗");
+            }
+
+            // --- V12 語義化重構：[原名]-[模式]-[版面]-日期-流水號.pptx ---
+            console.log("Core Processor Version: 20260120-V12-SEMANTIC-NAMING");
+
+            // 直接由瀏覽器處理下載，配合 Nginx 標頭透傳與 URL 路徑備援確保名稱。
+            window.location.href = `${API_BASE}${result.download_url}`;
+
             setStatus(t("sidebar.apply.completed"));
             setAppStatus(APP_STATUS.EXPORT_COMPLETED);
         } catch (error) {
