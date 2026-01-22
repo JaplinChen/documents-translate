@@ -1,4 +1,9 @@
-﻿# 企業級 PPTX 翻譯與校正控制台
+# 企業級 PPTX 翻譯與校正控制台
+
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/license-內部使用-lightgrey.svg)]()
 
 > 內部文件翻譯工具，支援 PPTX 與 DOCX 格式
 
@@ -10,6 +15,16 @@
 - 🎨 **校正模式**：色彩標示校正內容
 - 📄 **雙語輸出**：同時保留原文與譯文
 - 🐳 **Docker 部署**：一鍵啟動前後端服務
+
+---
+
+## 示範
+
+### 應用程式介面
+![應用程式介面](docs/screenshots/app-interface.png)
+
+### 翻譯過程
+![翻譯過程](docs/screenshots/translation-process.png)
 
 ---
 
@@ -137,9 +152,42 @@ source_lang,target_lang,source_text,target_text,priority
 
 ---
 
+## 貢獻指南
+
+歡迎提交 Issue 和 Pull Request！
+
+### 開發設定
+
+1. Fork 此專案
+2. 建立功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交變更 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 開啟 Pull Request
+
+### 程式碼規範
+
+- 遵循 PEP 8 風格指南
+- 使用型別提示
+- 為新功能添加測試
+- 更新相關文檔
+
+---
+
 ## 技術文件
 
 詳細技術規格請參閱 [TECH_SPEC.md](TECH_SPEC.md)
+
+---
+
+## 作者
+
+- **VPIC1 Japlin Chen** - *初始開發與維護*
+
+## 致謝
+
+- 感謝所有貢獻者
+- 特別感謝 OpenAI、Google Gemini 與 Ollama 團隊提供強大的 LLM 支援
+- 使用 FastAPI、React 與其他開源工具
 
 ---
 
