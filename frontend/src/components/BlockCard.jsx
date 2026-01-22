@@ -21,36 +21,7 @@ export default function BlockCard({
     const { t } = useTranslation();
     const outputMode = resolveOutputMode(block);
 
-    const renderCorrectionPreview = () => {
-        const translatedText = block.translated_text || "";
 
-        // Check if source already contains bilingual content (mixed languages)
-        const sourceText = block.source_text || "";
-        const hasMixedLanguages = /[a-zA-Z]/.test(sourceText) && /[\u4e00-\u9fff\u3040-\u30ff\u0e00-\u0e7f]/.test(sourceText);
-
-        // If source is already bilingual, use it directly without language extraction
-        const displaySource = hasMixedLanguages ? sourceText : extractLanguageLines(sourceText, sourceLang || "auto").join("\n");
-
-        const showTranslation = normalizeText(translatedText) && normalizeText(translatedText) !== normalizeText(displaySource);
-
-        if (!showTranslation) return null;
-        return (
-            <>
-                <div className="correction-source">{displaySource}</div>
-                <div
-                    className="correction-editor"
-                    contentEditable
-                    role="textbox"
-                    aria-multiline="true"
-                    suppressContentEditableWarning
-                    ref={(node) => { editorRefs.current[index] = node; }}
-                    onInput={(e) => onEditorInput(index, e)}
-                >
-                    {translatedText}
-                </div>
-            </>
-        );
-    };
 
     return (
         <div className={`block-card ${block.selected === false ? "is-muted" : ""} ${block.isTranslating ? "is-translating" : ""}`}>
@@ -78,9 +49,10 @@ export default function BlockCard({
                     </button>
                 </div>
             </div>
-            <div className="block-body">
-                <div>
-                    <div className="field-label-row">
+            <div className="block-body h-full">
+                {/* Source Column */}
+                <div className="flex flex-col h-full min-h-0">
+                    <div className="field-label-row shrink-0">
                         <span className="field-label">{t("components.block_card.source")}</span>
                         {mode === "correction" && (
                             <label className="toggle-check">
@@ -89,10 +61,13 @@ export default function BlockCard({
                             </label>
                         )}
                     </div>
-                    <div className="readonly-box">{block.source_text}</div>
+                    {/* Source Content - filled height */}
+                    <div className="readonly-box flex-1 h-full overflow-y-auto">{block.source_text}</div>
                 </div>
-                <div>
-                    <div className="field-label-row">
+
+                {/* Target Column */}
+                <div className="flex flex-col h-full min-h-0">
+                    <div className="field-label-row shrink-0">
                         <span className="field-label">{t("components.block_card.target")}</span>
                         {mode === "correction" && (
                             <label className="toggle-check">
@@ -101,13 +76,22 @@ export default function BlockCard({
                             </label>
                         )}
                     </div>
+                    {/* Target Content - filled height */}
                     {mode === "correction" ? (
-                        <div className="correction-stack">
-                            <div className="correction-preview">{renderCorrectionPreview()}</div>
+                        <div
+                            className="correction-editor flex-1 h-full overflow-y-auto border border-slate-300 rounded p-2"
+                            contentEditable
+                            role="textbox"
+                            aria-multiline="true"
+                            suppressContentEditableWarning
+                            ref={(node) => { editorRefs.current[index] = node; }}
+                            onInput={(e) => onEditorInput(index, e)}
+                        >
+                            {block.translated_text || ""}
                         </div>
                     ) : (
                         <textarea
-                            className="textarea"
+                            className="textarea flex-1 h-full"
                             value={block.translated_text || ""}
                             onChange={(e) => onBlockChange(index, e.target.value)}
                             placeholder={t("components.block_card.placeholder")}

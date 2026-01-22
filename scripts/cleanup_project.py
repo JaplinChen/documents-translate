@@ -1,128 +1,107 @@
 import os
 import shutil
-import sys
-from pathlib import Path
-
-# Configuration
-DRY_RUN = True  # Safety first
-PROJECT_ROOT = Path(__file__).parent.parent.resolve()
-
-# Targets to clean
-CACHE_DIRS = [
-    "__pycache__",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".mypy_cache",
-    "build",
-    "dist",
-    ".git_corrupted_backup"
-]
-
-TEMP_FILES = [
-    "*.log",
-    "*.tmp",
-    "*.bak",
-    ".DS_Store",
-    "backend_logs.txt",
-    "inspect_output.txt",
-    "overlap_debug*.txt",
-    "shape_xml_debug.txt",
-    "README.txt"
-]
-
-def confirm(prompt):
-    while True:
-        choice = input(f"{prompt} [y/N]: ").lower()
-        if choice in ('y', 'yes'):
-            return True
-        if choice in ('n', 'no', ''):
-            return False
+import argparse
 
 def cleanup():
-    print(f"Cleaning up project at: {PROJECT_ROOT}")
-    if DRY_RUN:
-        print(" [DRY RUN MODE] No files will be actually deleted.\n")
+    parser = argparse.ArgumentParser(description="PPTX-Translate Project Cleanup Script")
+    parser.add_argument("--dry-run", action="store_true", help="List files to be deleted without actual removal")
+    parser.add_argument("--force", action="store_true", help="Skip confirmation before deletion")
+    args = parser.parse_args()
 
-    files_to_remove = []
-    dirs_to_remove = []
+    # Targets to delete (folders and files)
+    FOLDERS_TO_CLEAN = [
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        "build",
+        "dist",
+    ]
+    
+    FILES_TO_CLEAN = [
+        "backend_logs.txt",
+        "overlap_recursive.txt",
+    ]
+    
+    FILE_EXTENSIONS_TO_CLEAN = [
+        ".log",
+        ".tmp",
+        ".bak",
+        ".DS_Store",
+    ]
 
-    # Scan for directories
-    for root, dirs, files in os.walk(PROJECT_ROOT):
-        # Skip .git, .venv, and node_modules to prevent accidents (and speed up)
-        if ".git" in dirs:
-            dirs.remove(".git")
-        if ".venv" in dirs:
-            dirs.remove(".venv")
+    # Orphaned scripts identified in audit
+    ORPHANED_SCRIPTS = [
+        "check_env.py",
+        "inspect_debug.py",
+        "verify_refresh.py",
+        "verify_translategemma.py",
+        "程式碼審查報告.md",
+    ]
+
+    to_delete_folders = []
+    to_delete_files = []
+
+    # Scan for folders
+    for root, dirs, files in os.walk("."):
+        # Exclude node_modules and .venv
         if "node_modules" in dirs:
             dirs.remove("node_modules")
+        if ".venv" in dirs:
+            dirs.remove(".venv")
             
         for d in dirs:
-            if d in CACHE_DIRS:
-                dirs_to_remove.append(Path(root) / d)
+            if d in FOLDERS_TO_CLEAN:
+                to_delete_folders.append(os.path.abspath(os.path.join(root, d)))
         
-        # Check files
         for f in files:
-            p = Path(root) / f
-            # Exact match check
-            if f in TEMP_FILES:
-                 files_to_remove.append(p)
-                 continue
-            
-            # Pattern match check
-            from fnmatch import fnmatch
-            for pattern in TEMP_FILES:
-                if fnmatch(f, pattern):
-                    files_to_remove.append(p)
-                    break
+            path = os.path.abspath(os.path.join(root, f))
+            # Check specific files
+            if f in FILES_TO_CLEAN:
+                to_delete_files.append(path)
+            # Check extensions
+            elif any(f.endswith(ext) for ext in FILE_EXTENSIONS_TO_CLEAN):
+                to_delete_files.append(path)
+            # Check orphaned scripts in root
+            elif root == "." and f in ORPHANED_SCRIPTS:
+                to_delete_files.append(path)
 
-    # Summary
-    print(f"Found {len(dirs_to_remove)} directories and {len(files_to_remove)} files to clean.")
-    
-    if not dirs_to_remove and not files_to_remove:
-        print("Nothing to clean. All good!")
+    if not to_delete_folders and not to_delete_files:
+        print("No cleanup targets found.")
         return
 
-    # List items
-    if dirs_to_remove:
-        print("\nDirectories to remove:")
-        for d in dirs_to_remove:
-            print(f"  [DIR]  {d.relative_to(PROJECT_ROOT)}")
+    print("=== Cleanup Targets ===")
+    for folder in to_delete_folders:
+        print(f"[FOLDER] {folder}")
+    for file in to_delete_files:
+        print(f"[FILE]   {file}")
+    print("========================")
 
-    if files_to_remove:
-        print("\nFiles to remove:")
-        for f in files_to_remove:
-            print(f"  [FILE] {f.relative_to(PROJECT_ROOT)}")
+    if args.dry_run:
+        print("\nDry-run mode enabled. No files were deleted.")
+        return
 
-    print("-" * 40)
-    
-    if DRY_RUN:
-        print("\nTo execute, run this script with --force or set DRY_RUN=False in code.")
-        print("Or I can prompt you now if you want to proceed despite dry run flag?")
-        if not confirm("Proceed with DELETION?"):
-            print("Aborted.")
+    if not args.force:
+        confirm = input(f"\nFound {len(to_delete_folders)} folders and {len(to_delete_files)} files. Proceed with deletion? (y/N): ")
+        if confirm.lower() != 'y':
+            print("Cleanup cancelled.")
             return
 
     # Execution
-    print("\nDeleting...")
-    for d in dirs_to_remove:
+    for folder in to_delete_folders:
         try:
-            if d.exists():
-                shutil.rmtree(d)
-                print(f"Deleted: {d.name}")
+            shutil.rmtree(folder)
+            print(f"Deleted folder: {folder}")
         except Exception as e:
-            print(f"Error deleting {d}: {e}")
+            print(f"Error deleting folder {folder}: {e}")
 
-    for f in files_to_remove:
+    for file in to_delete_files:
         try:
-            if f.exists():
-                os.remove(f)
-                print(f"Deleted: {f.name}")
+            os.remove(file)
+            print(f"Deleted file: {file}")
         except Exception as e:
-            print(f"Error deleting {f}: {e}")
+            print(f"Error deleting file {file}: {e}")
 
-    print("\nCleanup Complete.")
+    print("\nCleanup completed.")
 
 if __name__ == "__main__":
-    if "--force" in sys.argv:
-        DRY_RUN = False
     cleanup()

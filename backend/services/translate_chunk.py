@@ -89,9 +89,19 @@ def translate_chunk(
                 len(chunk_blocks),
             )
 
-            final_blocks, uncached_indices = get_from_cache(
-                chunk_blocks, target_language, provider, params.get("model", "default")
-            )
+            refresh = params.get("refresh", False)
+            if refresh:
+                final_blocks = [None] * len(chunk_blocks)
+                uncached_indices = list(range(len(chunk_blocks)))
+            else:
+                final_blocks, uncached_indices = get_from_cache(
+                    chunk_blocks, 
+                    target_language, 
+                    provider, 
+                    params.get("model", "default"),
+                    tone=tone,
+                    vision_context=vision_context
+                )
 
             if not uncached_indices:
                 return {"blocks": final_blocks}
@@ -176,9 +186,19 @@ async def translate_chunk_async(
                 len(chunk_blocks),
             )
 
-            final_blocks, uncached_indices = get_from_cache(
-                chunk_blocks, target_language, provider, params.get("model", "default")
-            )
+            refresh = params.get("refresh", False)
+            if refresh:
+                final_blocks = [None] * len(chunk_blocks)
+                uncached_indices = list(range(len(chunk_blocks)))
+            else:
+                final_blocks, uncached_indices = get_from_cache(
+                    chunk_blocks, 
+                    target_language, 
+                    provider, 
+                    params.get("model", "default"),
+                    tone=tone,
+                    vision_context=vision_context
+                )
 
             if not uncached_indices:
                 return {"blocks": final_blocks}

@@ -12,10 +12,9 @@ export function usePptxProcessor() {
 
     // Stores
     const { file, blocks, setBlocks } = useFileStore();
-    const {
-        llmProvider, llmApiKey, llmBaseUrl, llmModel, llmFastMode,
-        fontMapping, correction
-    } = useSettingsStore(); // Correction (fillColor etc)
+    const { llmProvider, providers, correction, fontMapping } = useSettingsStore();
+    const currentProvider = providers[llmProvider] || {};
+    const { apiKey: llmApiKey, baseUrl: llmBaseUrl, model: llmModel, fastMode: llmFastMode } = currentProvider;
     const {
         sourceLang, secondaryLang, targetLang, mode, bilingualLayout,
         setStatus, setAppStatus, setBusy, setSlideDimensions
@@ -110,7 +109,7 @@ export function usePptxProcessor() {
         }
     };
 
-    const handleTranslate = async () => {
+    const handleTranslate = async (refresh = false) => {
         if (blocks.length === 0) {
             setStatus(t("status.no_blocks"));
             return;
@@ -126,121 +125,145 @@ export function usePptxProcessor() {
 
         setBlocks(prev => prev.map(b => ({ ...b, isTranslating: true })));
 
-        try {
-            const formData = new FormData();
-            formData.append("blocks", JSON.stringify(blocks));
-            formData.append("source_language", sourceLang || "auto");
-            formData.append("secondary_language", secondaryLang || "auto");
-            formData.append("target_language", targetLang);
-            formData.append("mode", mode);
-            formData.append("use_tm", useTm ? "true" : "false");
-            formData.append("provider", llmProvider);
-            if (llmModel) formData.append("model", llmModel);
-            if (llmApiKey) formData.append("api_key", llmApiKey);
-            if (llmBaseUrl) formData.append("base_url", llmBaseUrl);
-            formData.append("ollama_fast_mode", llmFastMode ? "true" : "false");
+        let completedIds = [];
+        let retryCount = 0;
+        const maxRetries = 3;
 
-            const response = await fetch(`${API_BASE}/api/pptx/translate-stream`, {
-                method: "POST",
-                body: formData
-            });
+        const runTranslation = async () => {
+            try {
+                const formData = new FormData();
+                formData.append("blocks", JSON.stringify(blocks));
+                formData.append("source_language", sourceLang || "auto");
+                formData.append("secondary_language", secondaryLang || "auto");
+                formData.append("target_language", targetLang);
+                formData.append("mode", mode);
+                formData.append("use_tm", useTm ? "true" : "false");
+                formData.append("provider", llmProvider);
+                if (llmModel) formData.append("model", llmModel);
+                if (llmApiKey) formData.append("api_key", llmApiKey);
+                if (llmBaseUrl) formData.append("base_url", llmBaseUrl);
+                formData.append("ollama_fast_mode", llmFastMode ? "true" : "false");
+                formData.append("refresh", refresh ? "true" : "false");
 
-            if (!response.ok) {
-                const detail = await readErrorDetail(response, t("status.translate_failed"));
-                throw new Error(detail);
-            }
+                // 斷線重連：傳遞已完成的 ID 名單
+                if (completedIds.length > 0) {
+                    formData.append("completed_ids", JSON.stringify(completedIds));
+                }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-            let completedCount = 0;
-            // Capture current blocks snapshot reference isn't enough, we need to know existing state?
-            // Actually, we should just update blocks via setBlocks functional update to be safe
-            // But here we need indices.
-            let currentBlocks = [...blocks];
+                const response = await fetch(`${API_BASE}/api/pptx/translate-stream`, {
+                    method: "POST",
+                    body: formData
+                });
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) {
-                    if (buffer.trim()) {
-                        const lines = buffer.split("\n\n");
-                        for (const line of lines) {
-                            if (!line.trim()) continue;
-                            const eventMatch = line.match(/^event: (.*)$/m);
-                            const dataMatch = line.match(/^data: (.*)$/m);
-                            if (eventMatch && dataMatch) {
-                                const eventType = eventMatch[1];
-                                const eventData = JSON.parse(dataMatch[1]);
-                                if (eventType === "complete") {
-                                    const finalResult = eventData.blocks || [];
-                                    setBlocks(prev => prev.map((b, i) => ({
-                                        ...b,
-                                        translated_text: finalResult[i]?.translated_text || b.translated_text,
-                                        isTranslating: false,
-                                        updatedAt: finalResult[i]?.translated_text ? new Date().toLocaleTimeString("zh-TW", { hour12: false }) : b.updatedAt
-                                    })));
-                                    setProgress(100);
-                                    setStatus(t("sidebar.translate.completed"));
-                                    setAppStatus(APP_STATUS.TRANSLATION_COMPLETED);
-                                    setBusy(false);
-                                    return;
-                                } else if (eventType === "error") {
-                                    throw new Error(eventData.detail || t("status.translate_failed"));
+                if (!response.ok) {
+                    const detail = await readErrorDetail(response, t("status.translate_failed"));
+                    throw new Error(detail);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                let totalCompletedInContext = completedIds.length;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        // 如果讀取完成但緩衝區仍有資料，處理最後的 SSE 事件
+                        if (buffer.trim()) {
+                            const lines = buffer.split("\n\n");
+                            for (const line of lines) {
+                                if (!line.trim()) continue;
+                                const eventMatch = line.match(/^event: (.*)$/m);
+                                const dataMatch = line.match(/^data: (.*)$/m);
+                                if (eventMatch && dataMatch) {
+                                    const eventType = eventMatch[1];
+                                    const eventData = JSON.parse(dataMatch[1]);
+                                    if (eventType === "complete") {
+                                        finalizeTranslation(eventData.blocks);
+                                        return;
+                                    } else if (eventType === "error") {
+                                        throw new Error(eventData.detail || t("status.translate_failed"));
+                                    }
                                 }
                             }
                         }
-                    }
-                    setBusy((prevBusy) => {
-                        if (prevBusy) {
-                            setStatus(t("status.interrupted"));
-                            setAppStatus(APP_STATUS.IDLE);
+
+                        // 若未收到 complete 事件就結束，視為中斷，嘗試重連
+                        if (completedIds.length < blocks.length && retryCount < maxRetries) {
+                            retryCount++;
+                            setStatus({ key: "status.retrying", params: { count: retryCount } });
+                            await new Promise(r => setTimeout(r, 2000));
+                            return await runTranslation();
                         }
-                        return false;
-                    });
-                    break;
-                }
+                        break;
+                    }
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n\n");
-                buffer = lines.pop();
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n\n");
+                    buffer = lines.pop();
 
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    const eventMatch = line.match(/^event: (.*)$/m);
-                    const dataMatch = line.match(/^data: (.*)$/m);
-                    if (!eventMatch || !dataMatch) continue;
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        const eventMatch = line.match(/^event: (.*)$/m);
+                        const dataMatch = line.match(/^data: (.*)$/m);
+                        if (!eventMatch || !dataMatch) continue;
 
-                    const eventType = eventMatch[1];
-                    const eventData = JSON.parse(dataMatch[1]);
+                        const eventType = eventMatch[1];
+                        const eventData = JSON.parse(dataMatch[1]);
 
-                    if (eventType === "progress") {
-                        const { completed_indices } = eventData;
-                        completedCount += completed_indices.length;
+                        if (eventType === "progress") {
+                            const { completed_indices, completed_ids } = eventData;
+                            // 記錄已完成的 ID（後端需配合返回 ids）
+                            if (completed_ids) {
+                                completed_ids.forEach(id => {
+                                    if (!completedIds.includes(id)) completedIds.push(id);
+                                });
+                            }
+                            // 退回舊版相容性：如果是索引式進度
+                            else if (completed_indices) {
+                                completed_indices.forEach(idx => {
+                                    const id = blocks[idx]?.client_id;
+                                    if (id && !completedIds.includes(id)) completedIds.push(id);
+                                });
+                            }
 
-                        // We need to update local variable 'currentBlocks' ? No, UI driven.
-                        // Ideally we should batch updates to store.
-                        // For progress bar:
-                        const pct = Math.round((completedCount / blocks.length) * 100);
-                        setProgress(pct);
-                        setStatus(t("sidebar.translate.translating", { current: completedCount, total: blocks.length }));
-                    } else if (eventType === "complete") {
-                        const finalResult = eventData.blocks || [];
-                        setBlocks(prev => prev.map((b, i) => ({
-                            ...b,
-                            translated_text: finalResult[i]?.translated_text || b.translated_text,
-                            isTranslating: false,
-                            updatedAt: finalResult[i]?.translated_text ? new Date().toLocaleTimeString("zh-TW", { hour12: false }) : b.updatedAt
-                        })));
-                        setProgress(100);
-                        setStatus(t("sidebar.translate.completed"));
-                        setAppStatus(APP_STATUS.TRANSLATION_COMPLETED);
-                        setBusy(false);
-                        return;
-                    } else if (eventType === "error") {
-                        throw new Error(eventData.detail || t("status.translate_failed"));
+                            const pct = Math.round((completedIds.length / blocks.length) * 100);
+                            setProgress(pct);
+                            setStatus(t("sidebar.translate.translating", { current: completedIds.length, total: blocks.length }));
+                        } else if (eventType === "complete") {
+                            finalizeTranslation(eventData.blocks);
+                            return;
+                        } else if (eventType === "error") {
+                            throw new Error(eventData.detail || t("status.translate_failed"));
+                        }
                     }
                 }
+            } catch (error) {
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    setStatus({ key: "status.retrying", params: { count: retryCount } });
+                    await new Promise(r => setTimeout(r, 2000));
+                    return await runTranslation();
+                }
+                throw error;
             }
+        };
+
+        const finalizeTranslation = (finalBlocks = []) => {
+            setBlocks(prev => prev.map((b, i) => ({
+                ...b,
+                translated_text: finalBlocks[i]?.translated_text || b.translated_text,
+                isTranslating: false,
+                updatedAt: finalBlocks[i]?.translated_text ? new Date().toLocaleTimeString("zh-TW", { hour12: false }) : b.updatedAt
+            })));
+            setProgress(100);
+            setStatus(t("sidebar.translate.completed"));
+            setAppStatus(APP_STATUS.TRANSLATION_COMPLETED);
+            setBusy(false);
+        };
+
+        try {
+            await runTranslation();
         } catch (error) {
             setStatus(`${t("status.translate_failed")}：${error.message}`);
             setAppStatus(APP_STATUS.ERROR);

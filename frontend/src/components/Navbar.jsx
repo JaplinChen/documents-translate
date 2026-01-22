@@ -4,7 +4,7 @@ import { APP_STATUS } from "../constants";
 import TokenStats from "./TokenStats";
 import LanguageSelector from "./LanguageSelector";
 
-export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenManage, steps, progress }) {
+export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenManage, onOpenHistory, steps, progress }) {
     const { t } = useTranslation();
 
     return (
@@ -20,18 +20,7 @@ export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenM
             </div>
 
             <div className="navbar-nav">
-                <div className="dot-stepper">
-                    {steps.map((step) => (
-                        <div
-                            key={step.id}
-                            className={`dot-node ${step.id === currentStep ? "is-current" : ""} ${step.id < currentStep ? "is-done" : ""}`}
-                            title={step.label}
-                        >
-                            <span className="dot"></span>
-                            <span className="dot-label">{step.label}</span>
-                        </div>
-                    ))}
-                </div>
+                {/* Stepper moved to Sidebar */}
             </div>
 
             <div className="navbar-actions">
@@ -55,6 +44,7 @@ export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenM
             <div className="action-btns">
                 <LanguageSelector />
                 <TokenStats />
+
                 <button className="nav-icon-btn" onClick={onOpenManage} title={t("nav.manage")}>
                     📚
                 </button>

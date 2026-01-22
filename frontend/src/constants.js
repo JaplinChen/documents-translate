@@ -3,7 +3,7 @@
  */
 export const API_BASE = (typeof import.meta.env.VITE_API_BASE === "string" && import.meta.env.VITE_API_BASE !== "")
     ? import.meta.env.VITE_API_BASE
-    : (import.meta.env.VITE_API_BASE === "" ? "" : "http://localhost:8000");
+    : (import.meta.env.VITE_API_BASE === "" ? "" : "http://localhost:5001");
 
 /**
  * Default Ollama base URL
@@ -16,7 +16,8 @@ export const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
 export const OLLAMA_BASE_URLS = [
     "http://127.0.0.1:11434",
     "http://localhost:11434",
-    "http://host.docker.internal:11434"
+    "http://host.docker.internal:11434",
+    "http://192.168.90.168:11434"
 ];
 
 /**

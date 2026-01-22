@@ -9,7 +9,7 @@ from backend.services.translation_cache import cache
 
 
 def get_from_cache(
-    chunk_blocks: list[dict], target_language: str, provider: str, model: str
+    chunk_blocks: list[dict], target_language: str, provider: str, model: str, **kwargs
 ) -> tuple[list[dict | None], list[int]]:
     """Get blocks from cache and return final list and uncached indices."""
     final_blocks = []
@@ -20,6 +20,8 @@ def get_from_cache(
             target_language,
             provider,
             model,
+            tone=kwargs.get("tone"),
+            vision_context=kwargs.get("vision_context", True)
         )
         if cached:
             final_blocks.append({**block, "translated_text": cached})
@@ -70,6 +72,8 @@ def translate_and_cache_blocks(
             provider,
             params.get("model", "default"),
             translated_text,
+            tone=tone,
+            vision_context=vision_context
         )
 
     result["blocks"] = final_blocks
@@ -117,6 +121,8 @@ async def translate_and_cache_blocks_async(
             provider,
             params.get("model", "default"),
             translated_text,
+            tone=tone,
+            vision_context=vision_context
         )
 
     result["blocks"] = final_blocks

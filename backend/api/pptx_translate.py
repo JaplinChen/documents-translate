@@ -62,6 +62,7 @@ async def pptx_translate(
     tone: str | None = Form(None),
     vision_context: bool = Form(True),
     smart_layout: bool = Form(True),
+    refresh: bool = Form(False),
 ) -> dict:
     """Translate text blocks using LLM."""
     llm_mode = settings.translate_llm_mode
@@ -77,9 +78,9 @@ async def pptx_translate(
 
     resolved_source_language = resolve_source_language(blocks_data, source_language)
 
-    param_overrides = {}
+    param_overrides = {"refresh": refresh}
     if (provider or "").lower() == "ollama" and ollama_fast_mode:
-        param_overrides = {"single_request": False, "chunk_size": 1, "chunk_delay": 0.0}
+        param_overrides.update({"single_request": False, "chunk_size": 1, "chunk_delay": 0.0})
 
     try:
         translated = await translate_pptx_blocks_async(
@@ -143,8 +144,11 @@ async def pptx_translate_stream(
     tone: str | None = Form(None),
     vision_context: bool = Form(True),
     smart_layout: bool = Form(True),
+    refresh: bool = Form(False),
+    completed_ids: str | None = Form(None),
 ) -> StreamingResponse:
     """Translate text blocks and stream progress via SSE."""
+    print(f"[API_DEBUG] /translate-stream called. refresh={refresh}, provider={provider}", flush=True)
     try:
         blocks_data = coerce_blocks(json.loads(blocks))
     except Exception as exc:
@@ -155,9 +159,30 @@ async def pptx_translate_stream(
 
     resolved_source_language = resolve_source_language(blocks_data, source_language)
 
-    param_overrides = {}
+    param_overrides = {"refresh": refresh}
     if (provider or "").lower() == "ollama" and ollama_fast_mode:
-        param_overrides = {"single_request": False, "chunk_size": 1, "chunk_delay": 0.0}
+        param_overrides.update({"single_request": False, "chunk_size": 1, "chunk_delay": 0.0})
+
+    # 解析已完成的 ID 列表
+    completed_id_set = set()
+    if completed_ids:
+        try:
+            completed_id_set = set(json.loads(completed_ids))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # 執行過濾：跳過已翻譯且不在 refresh 模式下的區塊
+    effective_blocks = []
+    skipped_count = 0
+    for b in blocks_data:
+        # 如果 block 有 client_id 且在已完成名單中，且不是強制重新整理，則跳過
+        if not refresh and b.get("client_id") in completed_id_set:
+            skipped_count += 1
+            continue
+        effective_blocks.append(b)
+
+    if skipped_count > 0:
+        LOGGER.info("Resuming translation, skipping %s already completed blocks", skipped_count)
 
     async def event_generator():
         queue = asyncio.Queue()
@@ -181,9 +206,9 @@ async def pptx_translate_stream(
 
             task = asyncio.create_task(
                 translate_pptx_blocks_async(
-                    _prepare_blocks_for_correction(blocks_data, source_language)
+                    _prepare_blocks_for_correction(effective_blocks, source_language)
                     if mode == "correction"
-                    else blocks_data,
+                    else effective_blocks,
                     target_language,
                     source_language=resolved_source_language,
                     use_tm=use_tm,

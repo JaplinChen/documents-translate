@@ -17,6 +17,7 @@ from backend.services.llm_contract import validate_contract
 from backend.services.llm_prompt import build_prompt
 from backend.services.llm_utils import safe_json_loads
 from backend.services.prompt_store import get_prompt
+from backend.services.token_tracker import record_usage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +60,18 @@ class OllamaTranslator:
             with httpx.Client(timeout=settings.ollama_timeout) as client:
                 response = client.post(url, json=payload)
                 response.raise_for_status()
-                return response.json()
+                data = response.json()
+
+                # Record usage
+                if "prompt_eval_count" in data or "eval_count" in data:
+                    record_usage(
+                        provider="ollama",
+                        model=self.model,
+                        prompt_tokens=data.get("prompt_eval_count", 0),
+                        completion_tokens=data.get("eval_count", 0),
+                    )
+
+                return data
         except httpx.HTTPStatusError as exc:
             raise ValueError(
                 f"Ollama API 錯誤 ({exc.response.status_code}): {exc.response.reason_phrase}"
@@ -74,12 +86,23 @@ class OllamaTranslator:
             if self._async_client is not None:
                 response = await self._async_client.post(url, json=payload, timeout=settings.ollama_timeout)
                 response.raise_for_status()
-                return response.json()
+                data = response.json()
+            else:
+                async with httpx.AsyncClient(timeout=settings.ollama_timeout) as client:
+                    response = await client.post(url, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
 
-            async with httpx.AsyncClient(timeout=settings.ollama_timeout) as client:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-                return response.json()
+            # Record usage
+            if "prompt_eval_count" in data or "eval_count" in data:
+                record_usage(
+                    provider="ollama",
+                    model=self.model,
+                    prompt_tokens=data.get("prompt_eval_count", 0),
+                    completion_tokens=data.get("eval_count", 0),
+                )
+            
+            return data
         except httpx.HTTPStatusError as exc:
             raise ValueError(
                 f"Ollama API 錯誤 ({exc.response.status_code}): {exc.response.reason_phrase}"

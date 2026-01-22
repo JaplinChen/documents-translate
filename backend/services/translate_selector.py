@@ -134,4 +134,7 @@ def get_translation_params(provider: str, overrides: dict | None = None) -> dict
         "max_backoff": settings.llm_retry_max_backoff,
         "context_strategy": settings.llm_context_strategy.lower(),
         "glossary_path": settings.llm_glossary_path or "",
+        "model": overrides.get("model", settings.ollama_model),
+        "tone": overrides.get("tone"),
+        "vision_context": overrides.get("vision_context", True),
     }

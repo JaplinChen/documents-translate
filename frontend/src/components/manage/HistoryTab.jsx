@@ -1,0 +1,131 @@
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { API_BASE } from "../../constants";
+
+export default function HistoryTab({ onLoadFile }) {
+    const { t } = useTranslation();
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [loadingFile, setLoadingFile] = useState(null);
+
+    useEffect(() => {
+        fetchHistory();
+    }, []);
+
+    const fetchHistory = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/pptx/history`);
+            if (res.ok) {
+                const data = await res.json();
+                setItems(data.items || []);
+            }
+        } catch (err) {
+            console.error("Failed to fetch history", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDownload = (filename) => {
+        const encoded = encodeURIComponent(filename);
+        window.open(`${API_BASE}/api/pptx/download/${encoded}`, "_blank");
+    };
+
+    const handleLoad = async (item) => {
+        if (!onLoadFile) return;
+        setLoadingFile(item.filename);
+        try {
+            const encoded = encodeURIComponent(item.filename);
+            const res = await fetch(`${API_BASE}/api/pptx/download/${encoded}`);
+            if (!res.ok) throw new Error("Download failed");
+
+            const blob = await res.blob();
+            const file = new File([blob], item.filename, { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+
+            await onLoadFile(file);
+            // We assume the parent modal might close or show a success message if needed, 
+            // but for a tab execution, maybe we just load it. 
+            // The original closed the modal. We might want to notify the user.
+            // For now, just load it.
+        } catch (err) {
+            console.error("Failed to load file", err);
+            alert(t("history.load_error", "Failed to load file"));
+        } finally {
+            setLoadingFile(null);
+        }
+    };
+
+    const handleDelete = async (item) => {
+        if (!window.confirm(t("history.confirm_delete", "Delete this file?"))) return;
+        try {
+            const encoded = encodeURIComponent(item.filename);
+            const res = await fetch(`${API_BASE}/api/pptx/history/${encoded}`, { method: "DELETE" });
+            if (res.ok) fetchHistory();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    return (
+        <div className="history-tab-content">
+            {loading ? (
+                <div className="p-4 text-center text-slate-500">{t("common.loading", "Loading...")}</div>
+            ) : items.length === 0 ? (
+                <div className="p-4 text-center text-slate-400">{t("history.empty", "No history found")}</div>
+            ) : (
+                <div className="history-list max-h-[600px] overflow-y-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
+                            <tr>
+                                <th className="px-4 py-2">{t("history.filename", "File Name")}</th>
+                                <th className="px-4 py-2 w-32">{t("history.date", "Date")}</th>
+                                <th className="px-4 py-2 w-20">{t("history.size", "Size")}</th>
+                                <th className="px-4 py-2 w-32 text-center">{t("history.actions", "Actions")}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items.map((item, idx) => (
+                                <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                                    <td className="px-4 py-3 font-medium text-slate-700 truncate max-w-[300px]" title={item.filename}>
+                                        {item.filename}
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-500 text-xs">
+                                        {item.date_str}
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-500 text-xs">
+                                        {(item.size / 1024 / 1024).toFixed(2)} MB
+                                    </td>
+                                    <td className="px-4 py-3 flex gap-2 justify-center">
+                                        <button
+                                            className="action-btn-sm primary"
+                                            onClick={() => handleDownload(item.filename)}
+                                            title={t("common.download", "Download")}
+                                        >
+                                            ⬇
+                                        </button>
+                                        <button
+                                            className="action-btn-sm secondary"
+                                            onClick={() => handleLoad(item)}
+                                            disabled={!!loadingFile}
+                                            title={t("history.load", "Load into Editor")}
+                                        >
+                                            {loadingFile === item.filename ? "..." : "📂"}
+                                        </button>
+                                        <button
+                                            className="action-btn-sm danger hover:bg-red-100 text-red-600"
+                                            onClick={() => handleDelete(item)}
+                                            title={t("common.delete", "Delete")}
+                                        >
+                                            🗑️
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}

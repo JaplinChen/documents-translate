@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDraggableModal } from "../hooks/useDraggableModal";
 import { API_BASE } from "../constants";
 import PreserveTermsTab from "./manage/PreserveTermsTab";
+import HistoryTab from "./manage/HistoryTab";
 
 export default function ManageModal({
     open,
@@ -24,7 +25,8 @@ export default function ManageModal({
     onDeleteMemory,
     onClearMemory,
     onConvertToGlossary,
-    onConvertToPreserveTerm
+    onConvertToPreserveTerm,
+    onLoadFile
 }) {
     const { t } = useTranslation();
     const [editingKey, setEditingKey] = useState(null);
@@ -151,9 +153,12 @@ export default function ManageModal({
                     <button className={`tab-btn ${tab === "glossary" ? "is-active" : ""}`} type="button" onClick={() => setTab("glossary")}>{t("manage.tabs.glossary")}</button>
                     <button className={`tab-btn ${tab === "preserve" ? "is-active" : ""}`} type="button" onClick={() => setTab("preserve")}>{t("manage.tabs.preserve")}</button>
                     <button className={`tab-btn ${tab === "tm" ? "is-active" : ""}`} type="button" onClick={() => setTab("tm")}>{t("manage.tabs.tm")}</button>
+                    <button className={`tab-btn ${tab === "history" ? "is-active" : ""}`} type="button" onClick={() => setTab("history")}>{t("nav.history", "History")}</button>
                 </div>
                 <div className="modal-body">
-                    {tab === "preserve" ? (
+                    {tab === "history" ? (
+                        <HistoryTab onLoadFile={onLoadFile} />
+                    ) : tab === "preserve" ? (
                         <PreserveTermsTab onClose={onClose} />
                     ) : (
                         <>

@@ -13,8 +13,10 @@ export const useUIStore = create((set) => ({
     // --- Modals ---
     llmOpen: false,
     manageOpen: false,
+    historyOpen: false,
     setLlmOpen: (open) => set({ llmOpen: open }),
     setManageOpen: (open) => set({ manageOpen: open }),
+    setHistoryOpen: (open) => set({ historyOpen: open }),
 
     // --- Tabs ---
     llmTab: "llm",
@@ -27,7 +29,7 @@ export const useUIStore = create((set) => ({
 
     // --- Processing Settings ---
     mode: "bilingual",
-    bilingualLayout: "inline",
+    bilingualLayout: "new_slide",
     sourceLang: "",
     secondaryLang: "",
     targetLang: "zh-TW",

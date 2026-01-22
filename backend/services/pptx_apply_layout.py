@@ -19,27 +19,59 @@ def capture_font_spec(text_frame: TextFrame) -> dict[str, Any]:
         "size": None,
         "bold": None,
         "italic": None,
+        "underline": None,
+        "color": None,
+        "alignment": None,
+        "level": 0,
+        "pPr_xml": None,
     }
     try:
-        if text_frame.paragraphs and text_frame.paragraphs[0].runs:
-            run = text_frame.paragraphs[0].runs[0]
-            spec["name"] = run.font.name
-            spec["size"] = run.font.size
-            spec["bold"] = run.font.bold
-            spec["italic"] = run.font.italic
+        if text_frame.paragraphs:
+            # Find first paragraph with text, or fallback to first
+            p = text_frame.paragraphs[0]
+            for candidate_p in text_frame.paragraphs:
+                if candidate_p.text and candidate_p.text.strip():
+                    p = candidate_p
+                    break
+
+            spec["alignment"] = p.alignment
+            spec["level"] = p.level
+            
+            # Capture XML for high fidelity
+            try:
+                from lxml import etree
+                p_xml = p._p
+                p_pr_xml = p_xml.find('.//{http://schemas.openxmlformats.org/presentationml/2006/main}pPr')
+                if p_pr_xml is None:
+                    p_pr_xml = p_xml.find('.//{http://schemas.openxmlformats.org/drawingml/2006/main}pPr')
+                if p_pr_xml is not None:
+                    spec["pPr_xml"] = etree.tostring(p_pr_xml)
+            except Exception: pass
+
+            if p.runs:
+                run = p.runs[0]
+                spec["name"] = run.font.name
+                spec["size"] = run.font.size
+                spec["bold"] = run.font.bold
+                spec["italic"] = run.font.italic
+                spec["underline"] = run.font.underline
+                try: spec["color"] = run.font.color.rgb
+                except Exception: pass
     except Exception:
         pass
     return spec
 
 
 def add_overflow_textboxes(
-
     slide: Slide,
     base_shape,
     chunks: list[str],
     font_spec: dict[str, Any] | None,
-    translated_color: RGBColor,
-    max_bottom: int,
+    translated_color: RGBColor | None = None,
+    max_bottom: int = 0,
+    target_language: str | None = None,
+    font_mapping: dict[str, list[str]] | None = None,
+    scale: float = 1.0,
 ) -> None:
     if not chunks:
         return
@@ -57,25 +89,66 @@ def add_overflow_textboxes(
         for line_index, line in enumerate(chunk.split("\n")):
             paragraph = text_frame.paragraphs[0] if line_index == 0 else text_frame.add_paragraph()
             paragraph.text = line
+            
+            # Apply paragraph-level styles
+            # Apply paragraph-level styles
+            if font_spec:
+                if font_spec.get("alignment") is not None:
+                    paragraph.alignment = font_spec["alignment"]
+                paragraph.level = font_spec.get("level", 0)
+                
+                # Apply XML style if available
+                if font_spec.get("pPr_xml"):
+                    try:
+                        from lxml import etree
+                        target_p = paragraph._p
+                        new_p_pr = etree.fromstring(font_spec["pPr_xml"])
+                        
+                        # Replace or update existing pPr
+                        old_p_pr = target_p.find('.//{http://schemas.openxmlformats.org/presentationml/2006/main}pPr')
+                        if old_p_pr is None:
+                            old_p_pr = target_p.find('.//{http://schemas.openxmlformats.org/drawingml/2006/main}pPr')
+                        
+                        if old_p_pr is not None:
+                            target_p.replace(old_p_pr, new_p_pr)
+                        else:
+                            target_p.insert(0, new_p_pr)
+                    except Exception: pass
+
             if paragraph.runs:
                 run = paragraph.runs[0]
-                # Apply font spec manually since apply_font_spec is deprecated
                 if font_spec:
                     if font_spec.get("name"):
                         run.font.name = font_spec["name"]
                     if font_spec.get("size"):
-                        # Hardcoded 0.9 scale from original call
-                        run.font.size = int(font_spec["size"] * 0.9)
+                        # Apply both global scale and internal scale
+                        final_size = font_spec["size"]
+                        if scale != 1.0:
+                            final_size = int(final_size * scale)
+                        run.font.size = final_size
+                        
                     if font_spec.get("bold") is not None:
                         run.font.bold = font_spec["bold"]
                     if font_spec.get("italic") is not None:
                         run.font.italic = font_spec["italic"]
-                
-                # Apply color
-                try:
-                    run.font.color.rgb = translated_color
-                except Exception:
-                    pass
+                    if font_spec.get("underline") is not None:
+                        run.font.underline = font_spec["underline"]
+                    
+                    # Inherit color from spec if not overridden
+                    if font_spec.get("color"):
+                        try: run.font.color.rgb = font_spec["color"]
+                        except Exception: pass
+
+                # Override with font mapping if needed
+                if target_language or font_mapping:
+                    from backend.services.font_manager import clone_font_props
+                    clone_font_props(run.font, run.font, target_language=target_language, font_mapping=font_mapping)
+
+                if translated_color:
+                    try:
+                        run.font.color.rgb = translated_color
+                    except Exception:
+                        pass
 
 
 def duplicate_slide(presentation: Presentation, slide: Slide) -> tuple[Slide, dict[int, int]]:
@@ -102,7 +175,8 @@ def duplicate_slide(presentation: Presentation, slide: Slide) -> tuple[Slide, di
             try:
                 el = shape.element
                 el.getparent().remove(el)
-            except Exception:
+            except Exception as e:
+                print(f"[HYBRID_DUP] Failed to clear placeholder: {e}", flush=True)
                 pass
         
         shape_id_map = {}
@@ -132,9 +206,8 @@ def duplicate_slide(presentation: Presentation, slide: Slide) -> tuple[Slide, di
                     new_rid = new_slide.part.relate_to(rel.target_part, rel.reltype)
                 
                 rid_mapping[old_rid] = new_rid
-                print(f"[XML_DUP] Mapping rId: {old_rid} -> {new_rid} ({rel.reltype})", flush=True)
             except Exception as e:
-                print(f"[XML_DUP] Failed to copy relationship {old_rid}: {e}", flush=True)
+                print(f"[XML_DUP] Failed to copy relationship {old_rid} ({rel.reltype}): {e}", flush=True)
         
         # 3. Process each shape
         sp_tree = new_slide.shapes._spTree
@@ -143,8 +216,9 @@ def duplicate_slide(presentation: Presentation, slide: Slide) -> tuple[Slide, di
         for shape in slide.shapes:
             try:
                 old_id = shape.shape_id
+                shape_name = getattr(shape, "name", "Unknown")
                 
-                # Use unified XML deep copy for ALL shapes (including Pictures)
+                # Use unified XML deep copy for ALL shapes
                 new_element = deepcopy(shape.element)
                 
                 # Pass 1: Regenerate all shape IDs
@@ -173,13 +247,9 @@ def duplicate_slide(presentation: Presentation, slide: Slide) -> tuple[Slide, di
                     
                     # Fix relationship references (r:id, r:embed, r:link, etc.)
                     for attr_name, attr_val in list(elem.attrib.items()):
-                        # Check if attribute is in the relationship namespace
                         if 'http://schemas.openxmlformats.org/officeDocument/2006/relationships' in attr_name:
                             if attr_val in rid_mapping:
-                                old_val = attr_val
-                                new_val = rid_mapping[old_val]
-                                elem.attrib[attr_name] = new_val
-                                print(f"[XML_DUP] Remapped {attr_name}: {old_val} -> {new_val}", flush=True)
+                                elem.attrib[attr_name] = rid_mapping[attr_val]
                 
                 # Insert into shape tree
                 if ext_lst is not None:
@@ -188,16 +258,13 @@ def duplicate_slide(presentation: Presentation, slide: Slide) -> tuple[Slide, di
                     sp_tree.append(new_element)
                     
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Failed to copy shape {shape.shape_id}: {e}")
+                print(f"[HYBRID_DUP] Failed to copy shape ID {shape.shape_id}: {e}", flush=True)
                 continue
         
-        print(f"[HYBRID_DUP] Completed. Shape map has {len(shape_id_map)} entries", flush=True)
         return new_slide, shape_id_map
 
     except Exception as exc:
-        import logging
-        logging.getLogger(__name__).error(f"Duplicate slide failed: {exc}")
+        print(f"[HYBRID_DUP] CRITICAL: duplicate_slide completely failed. Falling back to Blank slide. Error: {exc}", flush=True)
         return presentation.slides.add_slide(presentation.slide_layouts[6]), {}
 
 
@@ -235,3 +302,158 @@ def iter_table_cells(shape) -> list[TextFrame]:
         for cell in row.cells:
             cells.append(cell.text_frame)
     return cells
+
+def fix_title_overlap(slide: Slide) -> None:
+    """
+    Detects if the title overlaps with other content.
+    Groups vertically aligned obstacles (e.g. stack of images) and moves/scales them together
+    to fit between the Title and any Bottom Limit (e.g. Table/Footer).
+    """
+    try:
+        title_shape = None
+        if slide.shapes.title:
+            title_shape = slide.shapes.title
+        else:
+            # Fallback: top-most text box
+            sorted_shapes = sorted(
+                [s for s in slide.shapes if s.has_text_frame], 
+                key=lambda s: s.top
+            )
+            if sorted_shapes:
+                title_shape = sorted_shapes[0]
+        
+        if not title_shape: return
+
+        # Title boundary with buffer
+        margin_buffer = 50000 
+        title_bottom = title_shape.top + title_shape.height + margin_buffer
+        slide_height = 6858000 
+        try: slide_height = slide.part.presentation.slide_height
+        except: pass
+
+        # 1. Identify valid obstacles
+        valid_types = (MSO_SHAPE_TYPE.PICTURE, MSO_SHAPE_TYPE.GROUP, 
+                       MSO_SHAPE_TYPE.TABLE, MSO_SHAPE_TYPE.AUTO_SHAPE)
+        
+        obstacles = [
+            s for s in slide.shapes 
+            if s.shape_id != title_shape.shape_id 
+            and s.shape_type in valid_types
+        ]
+
+        if not obstacles: return
+
+        # 2. Group obstacles into "Columns" based on X-overlap
+        # Simple clustering: if horizontal overlap > 0.5 * min_width
+        columns = []
+        sorted_obs = sorted(obstacles, key=lambda s: s.left)
+        
+        while sorted_obs:
+            current = sorted_obs.pop(0)
+            col = [current]
+            
+            # Find all subsequent shapes that align with 'current'
+            # We iterate a copy to safely modify sorted_obs
+            remaining = []
+            current_center = current.left + current.width / 2
+            
+            for other in sorted_obs:
+                other_center = other.left + other.width / 2
+                # Check alignment: centers are close (within 20% of width)
+                # or significant overlap
+                overlap_x = min(current.left + current.width, other.left + other.width) - max(current.left, other.left)
+                is_aligned = False
+                
+                if overlap_x > 0:
+                   share_pct = overlap_x / min(current.width, other.width)
+                   if share_pct > 0.5: is_aligned = True
+                
+                if is_aligned:
+                    col.append(other)
+                else:
+                    remaining.append(other)
+            
+            columns.append(col)
+            sorted_obs = remaining
+
+        # 3. Process each column
+        for col in columns:
+            # Sort column by top
+            col.sort(key=lambda s: s.top)
+            
+            top_shape = col[0]
+            bottom_shape = col[-1]
+            col_top = top_shape.top
+            col_bottom = bottom_shape.top + bottom_shape.height
+            
+            # Check overlap with Title
+            if col_top < title_bottom and col_bottom > title_shape.top:
+                # We have a collision.
+                
+                # Detect Floor (Limit Bottom) for this specific column
+                limit_bottom = slide_height
+                
+                # Check against ALL other shapes not in this column
+                col_ids = {s.shape_id for s in col}
+                for potential in slide.shapes:
+                    if potential.shape_id in col_ids: continue
+                    if potential.shape_id == title_shape.shape_id: continue
+                    
+                    # Must be below current column bottom? No, below current column TOP (potential block)
+                    # Actually we want the nearest object strictly below the "would-be" position?
+                    # Let's find obstacles strictly below the current column footprint
+                    if potential.top >= col_top: # Candidate for floor
+                         # Check horizontal overlap with column
+                         c_left = min(s.left for s in col)
+                         c_width = max(s.left + s.width for s in col) - c_left
+                         
+                         p_overlap = min(c_left + c_width, potential.left + potential.width) - max(c_left, potential.left)
+                         if p_overlap > 0:
+                             if potential.top < limit_bottom:
+                                 limit_bottom = potential.top
+
+                # Calculate Available Space
+                margin = 50000
+                target_top = title_bottom + margin
+                max_frame_height = (limit_bottom - margin) - target_top
+                
+                if max_frame_height < 100000:
+                    # Too tight, just nudge top
+                     pass 
+                else:
+                    # Current Height of the group
+                    current_group_height = col_bottom - col_top
+                    
+                    # Determine Scale Factor
+                    scale = 1.0
+                    if current_group_height > max_frame_height:
+                        scale = max_frame_height / current_group_height
+                    
+                    # Apply Transformation
+                    # 1. Calculate new top for the first element
+                    # 2. Re-space subsequent elements relative to first
+                    
+                    base_top = target_top
+                    
+                    # We need to maintain relative offsets
+                    # offsets[i] = (shape.top - col_top) * scale
+                    
+                    for s in col:
+                        rel_y = s.top - col_top
+                        new_rel_y = int(rel_y * scale)
+                        
+                        s.top = base_top + new_rel_y
+                        
+                        # Scale size
+                        s.height = int(s.height * scale)
+                        s.width = int(s.width * scale)
+                        
+                        # Fix X center? 
+                        # Usually scaling is centered or top-left. 
+                        # To be safe, keep left as is (or scale relative to center?)
+                        # User asked for "Scale Down", usually implies shrinking in place or towards center.
+                        # But simple W/H scale + Top adjust is usually safest for layout preservation.
+                        pass
+
+    except Exception as e:
+        print(f"[LAYOUT_FIX] Error in fix_title_overlap: {e}", flush=True)

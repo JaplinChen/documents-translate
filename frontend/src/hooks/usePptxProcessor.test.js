@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { useTranslation } from 'react-i18next';
 import { usePptxProcessor } from './usePptxProcessor';
 import { useUIStore } from '../store/useUIStore';
 import { useFileStore } from '../store/useFileStore';
@@ -120,6 +121,39 @@ describe('usePptxProcessor', () => {
             await result.current.handleTranslate();
         });
 
+        expect(useFileStore.getState().blocks[0].translated_text).toBe('你好');
+        expect(useUIStore.getState().appStatus).toBe('translation_completed');
+    });
+
+    it('should retry on stream interruption', async () => {
+        const mockBlocks = [{ _uid: '1', source_text: 'hello', client_id: 'block1' }];
+        useFileStore.setState({ blocks: mockBlocks });
+
+        const mockEventData = JSON.stringify({
+            blocks: [{ _uid: '1', source_text: 'hello', translated_text: '你好', client_id: 'block1' }]
+        });
+
+        // First attempt fails, second succeeds
+        global.fetch
+            .mockRejectedValueOnce(new Error('Network break'))
+            .mockResolvedValueOnce({
+                ok: true,
+                body: new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(new TextEncoder().encode(`event: complete\ndata: ${mockEventData}\n\n`));
+                        controller.close();
+                    }
+                })
+            });
+
+        const { result } = renderHook(() => usePptxProcessor());
+
+        await act(async () => {
+            await result.current.handleTranslate();
+        });
+
+        // Should have retried and eventually succeeded
+        expect(global.fetch).toHaveBeenCalledTimes(2);
         expect(useFileStore.getState().blocks[0].translated_text).toBe('你好');
         expect(useUIStore.getState().appStatus).toBe('translation_completed');
     });

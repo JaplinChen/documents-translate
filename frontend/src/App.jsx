@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import SettingsModal from "./components/SettingsModal";
 import ManageModal from "./components/ManageModal";
+import HistoryModal from "./components/HistoryModal";
 import { Navbar } from "./components/Navbar";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPanel } from "./components/EditorPanel";
@@ -17,6 +18,8 @@ import { usePanelResize } from "./hooks/usePanelResize";
 import { useFileStore } from "./store/useFileStore";
 import { useSettingsStore } from "./store/useSettingsStore";
 import { useUIStore } from "./store/useUIStore";
+
+import { LANGUAGE_OPTIONS, extractLanguageLines } from "./utils/appHelpers";
 
 function App() {
   const { t } = useTranslation();
@@ -34,15 +37,6 @@ function App() {
   const processor = usePptxProcessor();
 
   usePanelResize(leftPanelRef, fileStore.blocks.length);
-
-  // --- Derived State for filtering ---
-  const extractLanguageLines = (text, lang) => {
-    const lines = (text || "").split("\n").map(l => l.trim()).filter(Boolean);
-    if (!lang || lang === "auto") return lines;
-    if (lang.startsWith("zh")) return lines.filter(l => CJK_REGEX.test(l));
-    if (lang === "vi") return lines.filter(l => VI_REGEX.test(l));
-    return lines;
-  };
 
   const filteredBlocks = React.useMemo(() => {
     const { blocks } = fileStore;
@@ -63,17 +57,6 @@ function App() {
     });
   }, [fileStore.blocks, ui.filterText, ui.filterSlide, ui.filterType]);
 
-  // --- Helpers ---
-  const languageOptions = [
-    { code: "auto", label: "自動 (Auto)" },
-    { code: "vi", label: "Tiếng Việt" },
-    { code: "zh-TW", label: "繁體中文" },
-    { code: "zh-CN", label: "简体中文" },
-    { code: "en", label: "English" },
-    { code: "ja", label: "日本語" },
-    { code: "ko", label: "한국어" }
-  ];
-
   const applyDetectedLanguages = (summary) => {
     const primary = summary?.primary || "";
     const secondary = summary?.secondary || "";
@@ -83,8 +66,6 @@ function App() {
   };
 
   // --- Initial Extract Effect ---
-  // Note: processor.handleExtract() reads from fileStore.file
-  // We need to trigger it when file changes.
   useEffect(() => {
     if (!fileStore.file) return;
     processor.handleExtract().then(applyDetectedLanguages);
@@ -102,18 +83,14 @@ function App() {
     fileStore.updateBlock(uid, { output_mode: value });
   };
 
-  const isFileSelected = !!fileStore.file;
-  const isExtracted = fileStore.blocks.length > 0;
-  const hasTranslation = fileStore.blocks.some(b => b.translated_text);
-
   // Robust stepper logic using Enum
   const isExportFinished = ui.appStatus === APP_STATUS.EXPORT_COMPLETED || ui.appStatus === APP_STATUS.EXPORTING;
-  const isTranslatingOrDone = hasTranslation || ui.appStatus === APP_STATUS.TRANSLATING || ui.appStatus === APP_STATUS.TRANSLATION_COMPLETED;
+  const isTranslatingOrDone = fileStore.blocks.some(b => b.translated_text) || ui.appStatus === APP_STATUS.TRANSLATING || ui.appStatus === APP_STATUS.TRANSLATION_COMPLETED;
 
   let currentStep = 1;
   if (isExportFinished) currentStep = 4;
   else if (isTranslatingOrDone) currentStep = 3;
-  else if (isExtracted) currentStep = 2;
+  else if (fileStore.blocks.length > 0) currentStep = 2;
 
   const steps = [
     { id: 1, label: t("nav.step1") },
@@ -133,6 +110,7 @@ function App() {
           progress={processor.progress}
           onOpenSettings={() => ui.setLlmOpen(true)}
           onOpenManage={() => ui.setManageOpen(true)}
+          onOpenHistory={() => ui.setHistoryOpen(true)}
         />
       </div>
 
@@ -145,7 +123,7 @@ function App() {
           secondaryLang={ui.secondaryLang} setSecondaryLang={ui.setSecondaryLang} setSecondaryLocked={ui.setSecondaryLocked}
           targetLang={ui.targetLang} setTargetLang={ui.setTargetLang} setTargetLocked={ui.setTargetLocked}
           useTm={settings.useTm} setUseTm={settings.setUseTm}
-          languageOptions={languageOptions}
+          languageOptions={LANGUAGE_OPTIONS}
           busy={ui.busy}
           onExtract={processor.handleExtract}
           onExtractGlossary={() => tm.handleExtractGlossary({
@@ -260,7 +238,7 @@ function App() {
       <ManageModal
         open={ui.manageOpen} onClose={() => ui.setManageOpen(false)}
         tab={ui.manageTab} setTab={ui.setManageTab}
-        languageOptions={languageOptions}
+        languageOptions={LANGUAGE_OPTIONS}
         defaultSourceLang={ui.sourceLang || "vi"}
         defaultTargetLang={ui.targetLang || "zh-TW"}
         glossaryItems={tm.glossaryItems}
@@ -274,6 +252,22 @@ function App() {
         onClearMemory={tm.clearMemory}
         onConvertToGlossary={tm.convertMemoryToGlossary}
         onConvertToPreserveTerm={tm.convertGlossaryToPreserveTerm}
+        onLoadFile={(file) => {
+          fileStore.setFile(file);
+          fileStore.setBlocks([]);
+          ui.setAppStatus(APP_STATUS.IDLE);
+          ui.setManageOpen(false); // Close modal on load
+        }}
+      />
+
+      <HistoryModal
+        open={ui.historyOpen}
+        onClose={() => ui.setHistoryOpen(false)}
+        onLoadFile={(file) => {
+          fileStore.setFile(file);
+          fileStore.setBlocks([]);
+          ui.setAppStatus(APP_STATUS.IDLE);
+        }}
       />
 
     </div>

@@ -95,13 +95,7 @@ export function EditorPanel({
                                     activeBlockId={activeBlockId}
                                 />
                             </div>
-                        ) : (
-                            <div className="editor-preview-guidance p-4 bg-slate-50 border-b border-slate-200 text-center">
-                                <p className="text-xs text-slate-400">
-                                    💡 {t("editor.preview_guidance", "Enter a Slide Number in the filter above to see a layout preview.")}
-                                </p>
-                            </div>
-                        )
+                        ) : null
                     ) : null}
 
                     <div className="block-list">

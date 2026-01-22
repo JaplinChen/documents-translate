@@ -17,6 +17,7 @@ from backend.services.llm_client_base import TranslationConfig, load_contract_ex
 from backend.services.llm_contract import validate_contract
 from backend.services.llm_prompt import build_prompt
 from backend.services.prompt_store import get_prompt
+from backend.services.token_tracker import record_usage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -70,6 +71,16 @@ class OpenAITranslator:
             response.raise_for_status()
             response_data = response.json()
 
+        # Record usage
+        if "usage" in response_data:
+            usage = response_data["usage"]
+            record_usage(
+                provider="openai",
+                model=self.config.model,
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+            )
+
         content = response_data["choices"][0]["message"]["content"]
         result = json.loads(content)
         validate_contract(result)
@@ -117,6 +128,16 @@ class OpenAITranslator:
             response = await client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             response_data = response.json()
+
+        # Record usage
+        if "usage" in response_data:
+            usage = response_data["usage"]
+            record_usage(
+                provider="openai",
+                model=self.config.model,
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+            )
 
         content = response_data["choices"][0]["message"]["content"]
         result = json.loads(content)

@@ -16,13 +16,16 @@ from backend.api import (
     token_stats_router,
 )
 
+from backend.tools.logging_middleware import StructuredLoggingMiddleware
+
 app = FastAPI()
+app.add_middleware(StructuredLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Content-Disposition"],
+    expose_headers=["Content-Disposition", "X-Request-ID"],
 )
 
 app.include_router(pptx_router)

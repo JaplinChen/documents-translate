@@ -75,6 +75,8 @@ def translate_blocks(
         preferred_terms,
     )
 
+    param_overrides = (param_overrides or {}).copy()
+    param_overrides.update({"model": model, "tone": tone, "vision_context": vision_context})
     params = get_translation_params(resolved_provider, overrides=param_overrides)
     chunk_size = params["chunk_size"]
     if params["single_request"]:
@@ -170,6 +172,9 @@ async def translate_blocks_async(
     preferred_terms = load_preferred_terms(source_lang, target_language, use_tm)
     use_placeholders = resolved_provider != "ollama"
 
+    param_overrides = (param_overrides or {}).copy()
+    refresh = param_overrides.get("refresh", False)
+
     translated_texts, pending, local_cache = prepare_pending_blocks(
         blocks_list,
         target_language,
@@ -177,8 +182,10 @@ async def translate_blocks_async(
         use_tm,
         use_placeholders,
         preferred_terms,
+        refresh=refresh,
     )
 
+    param_overrides.update({"model": model, "tone": tone, "vision_context": vision_context})
     params = get_translation_params(resolved_provider, overrides=param_overrides)
     chunk_size = params["chunk_size"]
     if params["single_request"]:

@@ -38,23 +38,31 @@ def prepare_pending_blocks(
     use_tm: bool,
     use_placeholders: bool,
     preferred_terms: list[tuple[str, str]],
+    refresh: bool = False,
 ) -> tuple[list[str | None], list[tuple[int, dict]], dict[str, str]]:
     """Prepare blocks for translation, checking cache and TM."""
     local_cache: dict[str, str] = {}
     translated_texts: list[str | None] = [None] * len(blocks_list)
     pending: list[tuple[int, dict]] = []
 
+    print(f"[HELPER_DEBUG] prepare_pending start. blocks={len(blocks_list)}, refresh={refresh}, use_tm={use_tm}", flush=True)
+
     for index, block in enumerate(blocks_list):
         key = cache_key(block)
         if not key:
             translated_texts[index] = ""
             continue
+        
+        # Debug Trace
+        # print(f"[HELPER_TRACE] Block {index}: key={key[:10]}..., in_local={key in local_cache}", flush=True)
+
         if key in local_cache:
             if not use_placeholders and has_placeholder(local_cache[key]):
                 continue
             translated_texts[index] = local_cache[key]
             continue
-        if source_lang and source_lang != "auto" and use_tm:
+        # If refreshing, skip TM lookup
+        if source_lang and source_lang != "auto" and use_tm and not refresh:
             tm_hit = lookup_tm(
                 source_lang=source_lang,
                 target_lang=target_language,
@@ -145,11 +153,13 @@ async def process_chunk_async(
 
     if on_progress:
         completed_indices = [idx for idx, _ in chunk]
+        completed_ids = [b.get("client_id") for _, b in chunk if b.get("client_id")]
         try:
             val = on_progress(
                 {
                     "chunk_index": chunk_index,
                     "completed_indices": completed_indices,
+                    "completed_ids": completed_ids,
                     "chunk_size": len(chunk),
                     "total_pending": len(translated_texts),
                     "timestamp": time.time(),

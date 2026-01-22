@@ -61,3 +61,8 @@ pnpm-debug.log*
 # Local data
 backend/data/*.db
 data/
+
+# Agent & Temp
+.agent/
+.antigravity/
+.pytest_cache/

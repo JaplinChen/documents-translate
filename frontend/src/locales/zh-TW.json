@@ -17,7 +17,7 @@
             "label": "模式",
             "bilingual": "雙語輸出",
             "translated": "翻譯文件",
-            "correction": "中文校正模式",
+            "correction": "校正模式",
             "translate": "翻譯模式"
         },
         "layout": {
@@ -46,6 +46,7 @@
             "translating": "翻譯中... ({{current}}/{{total}})",
             "completed": "翻譯完成",
             "button": "🚀 開始 AI 自動翻譯",
+            "refresh_button": "🔄 強制重新翻譯",
             "stop": "停止"
         },
         "apply": {

@@ -126,10 +126,12 @@ def emu_to_points(emu: int | float) -> float:
     return float(emu) / 12700.0
 
 
-def _iter_textbox_blocks(slide: Slide, slide_index: int) -> Iterable[dict]:
+def _iter_textbox_blocks(slide: Slide, slide_index: int, seen_ids: set[int]) -> Iterable[dict]:
     for shape in _iter_shapes(slide.shapes):
         try:
             if not shape.has_text_frame or shape.has_table:
+                continue
+            if shape.shape_id in seen_ids:
                 continue
             text = _text_frame_to_text(shape.text_frame)
         except Exception:
@@ -137,6 +139,7 @@ def _iter_textbox_blocks(slide: Slide, slide_index: int) -> Iterable[dict]:
         if not text or _is_numeric_only(text) or _is_technical_terms_only(text):
             continue
         
+        seen_ids.add(shape.shape_id)
         # Extract layout info
         x = emu_to_points(shape.left)
         y = emu_to_points(shape.top)
@@ -200,7 +203,8 @@ def extract_blocks(pptx_path: str) -> dict:
     slide_height = emu_to_points(presentation.slide_height)
 
     for slide_index, slide in enumerate(presentation.slides):
-        blocks.extend(_iter_textbox_blocks(slide, slide_index))
+        seen_ids = set()
+        blocks.extend(_iter_textbox_blocks(slide, slide_index, seen_ids))
         blocks.extend(_iter_table_blocks(slide, slide_index))
         blocks.extend(_iter_notes_blocks(slide, slide_index))
     

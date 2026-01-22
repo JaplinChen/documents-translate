@@ -31,8 +31,12 @@ def estimate_scale(source_text: str, translated_text: str) -> float:
     def get_weight(t: str) -> int:
         weight = 0
         for char in t:
-            # CJK characters are roughly 2x width of Latin characters
-            weight += 2 if contains_cjk(char) else 1
+            code = ord(char)
+            # CJK characters or Vietnamese diacritics / complex chars / non-ASCII
+            if 0x4E00 <= code <= 0x9FFF or 0x3400 <= code <= 0x4DBF or code > 0x00FF:
+                weight += 2
+            else:
+                weight += 1
         return max(weight, 1)
 
     s_weight = get_weight(source_text)
@@ -44,14 +48,12 @@ def estimate_scale(source_text: str, translated_text: str) -> float:
     # If target is heavier than source, shrink font
     ratio = s_weight / t_weight
     
-    # 2026/01/20 Update: Increase aggressiveness from 0.5 power to 0.7 power.
-    # Example: If translation is 2x longer, ratio is 0.5.
-    # Old (0.5 power): 0.5^0.5 = 0.70
-    # New (0.7 power): 0.5^0.7 = 0.61 (Better for narrow PPT text boxes)
-    scale = ratio**0.7
+    # 2026/01/22 Update: Decrease aggressiveness (use 0.5 power instead of 0.7)
+    # This prevents text from becoming too small in complex slides.
+    scale = ratio**0.5
     
-    # Allow shrinking down to 0.5 to prevent overflow in severe cases
-    return max(0.5, min(1.0, scale))
+    # Allow shrinking down to 0.6 to maintain readability
+    return max(0.6, min(1.0, scale))
 
 
 def clone_font_props(

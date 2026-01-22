@@ -64,6 +64,68 @@
         @apply text-xs font-bold text-slate-500;
     }
 
+    /* === Sidebar Stepper (Compact & Premium) === */
+    .sidebar-stepper {
+        @apply w-full mb-1 mt-1;
+    }
+
+    .premium-stepper {
+        @apply flex items-center justify-between relative px-2;
+    }
+
+    .stepper-node {
+        @apply relative z-10 flex flex-col items-center gap-1;
+    }
+
+    .node-wrapper {
+        @apply flex flex-col items-center;
+    }
+
+    .node-dot {
+        @apply w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-400 border border-slate-200 transition-all duration-300;
+    }
+
+    .node-content {
+        @apply hidden;
+        /* Hide labels in compact sidebar stepper to save space or avoid clutter */
+    }
+
+    /* Active/Done States */
+    .stepper-node.is-done .node-dot {
+        @apply bg-blue-100 text-blue-600 border-blue-200;
+    }
+
+    .stepper-node.is-current .node-dot {
+        @apply bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 scale-110;
+    }
+
+    /* Connector Bars */
+    .stepper-connector {
+        @apply flex-1 h-[2px] bg-slate-100 mx-1 mb-0 self-center relative -top-[0px];
+    }
+
+    .stepper-connector.is-active .connector-bar {
+        @apply w-full h-full bg-blue-200;
+    }
+
+    /* Pulse Animation */
+    .node-pulse {
+        @apply absolute inset-0 rounded-full bg-blue-500 -z-10 opacity-75;
+        animation: pulse-ring 2s cubic-bezier(0.2, 0, 0, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+        0% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+
+        100% {
+            transform: scale(2);
+            opacity: 0;
+        }
+    }
+
     /* Navbar Actions */
     .navbar-actions {
         @apply flex items-center gap-6;
@@ -246,7 +308,7 @@
 
     .mini-status {
         @apply flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200;
-        @apply w-full max-w-[160px] md:max-w-[200px] transition-all duration-300;
+        @apply w-full max-w-[240px] md:max-w-[320px] transition-all duration-300;
     }
 
     .mini-status.is-error {

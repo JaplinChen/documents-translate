@@ -1,40 +1,60 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
-export function Stepper({ file, blockCount, selectedCount, status }) {
+import { APP_STATUS } from "../constants";
+
+export function Stepper({ file, blockCount, selectedCount, status, appStatus }) {
+    const { t } = useTranslation();
     const isFileSelected = !!file;
     const isExtracted = blockCount > 0;
-    const isSelected = selectedCount > 0;
-    const isFinished = status.includes("輸出") || status.includes("完成");
 
-    // Determine current step (1-4)
+    // Determine current step (1-4) based on explicit appStatus
     let currentStep = 1;
-    if (isFinished) currentStep = 4;
-    else if (status.includes("設定") || isSelected) currentStep = 3; // Selected means ready to configure or already configured
-    else if (isExtracted) currentStep = 2;
-    else if (isFileSelected) currentStep = 1;
+
+    if (appStatus === APP_STATUS.EXPORT_COMPLETED) {
+        currentStep = 4;
+    } else if (
+        appStatus === APP_STATUS.TRANSLATING ||
+        appStatus === APP_STATUS.TRANSLATION_COMPLETED ||
+        appStatus === APP_STATUS.EXPORTING
+    ) {
+        currentStep = 3;
+    } else if (isExtracted) {
+        currentStep = 2;
+    } else if (isFileSelected) {
+        currentStep = 1;
+    }
+
+    const isFinished = currentStep === 4;
 
     const steps = [
-        { id: 1, label: "上傳", desc: "Upload PPTX", active: isFileSelected },
-        { id: 2, label: "解析", desc: "Extract & Glossary", active: isExtracted },
-        { id: 3, label: "設定", desc: "Configure AI", active: isExtracted }, // Step 3 is available once extracted
-        { id: 4, label: "執行", desc: "Translate & Export", active: isFinished }
+        { id: 1, label: t("nav.step1"), active: isFileSelected },
+        { id: 2, label: t("nav.step2"), active: isExtracted },
+        { id: 3, label: t("nav.step3"), active: currentStep >= 3 },
+        { id: 4, label: t("nav.step4"), active: isFinished }
     ];
 
     return (
-        <div className="global-stepper-container is-compact">
+        <div className="global-stepper-container is-compact sidebar-stepper">
             <div className="premium-stepper">
                 {steps.map((step, index) => (
                     <React.Fragment key={step.id}>
                         <div className={`stepper-node ${step.active ? "is-done" : ""} ${currentStep === step.id ? "is-current" : ""}`}>
                             <div className="node-wrapper">
                                 <div className="node-dot">
-                                    {step.active && step.id < currentStep ? "✓" : step.id}
-                                    <div className="node-pulse"></div>
+                                    {step.id}
+                                    {currentStep === step.id && <div className="node-pulse"></div>}
                                 </div>
-                                <div className="node-content">
-                                    <span className="node-label">{step.label}</span>
-                                    <span className="node-desc">{step.desc}</span>
-                                </div>
+                                {/* Label removed based on "Indicator text to numbers" + compact layout assumption for sidebar? 
+                                    Actually user said "Indicator text changed to numbers". 
+                                    If I keep labels it might be too wide for sidebar. 
+                                    But sidebar usually has width. 
+                                    Let's keep labels but make them small if needed.
+                                    Or maybe the user implies the NUMBER is the only text.
+                                    Let's check the current Sidebar "1 Upload".
+                                    If I put this stepper in sidebar, it duplicates the list below.
+                                    But requested. I will keep labels for clarity but maybe hide description.
+                                */}
                             </div>
                         </div>
                         {index < steps.length - 1 && (
