@@ -1,10 +1,10 @@
-# 企業級 PPTX 翻譯與校正控制台 (PPTX-Translate)
+# 企業常用文件翻譯與校正控制台 (Documents-Translate)
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/license-內部使用-lightgrey.svg)]()
 
-> 專為企業內部文件設計的翻譯與樣式校正工具，支援 PPTX 格式。
+> 專為企業內部文件設計的翻譯與樣式校正工具，支援 PPTX/XLSX/DOCX/PDF 格式。
 
 ## 🌟 重點功能
 
