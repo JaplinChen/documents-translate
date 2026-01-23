@@ -12,7 +12,7 @@ export default function LanguageSelector() {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+    const currentLang = LANGUAGES.find(l => i18n.language === l.code || i18n.language?.startsWith(l.code)) || LANGUAGES[0];
 
     useEffect(() => {
         function handleClickOutside(event) {

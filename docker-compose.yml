@@ -14,7 +14,7 @@ services:
       - TRANSLATE_LLM_MODE=${TRANSLATE_LLM_MODE:-real}
       # 連接本機 Ollama (使用 host.docker.internal)
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-translategemma:4b}
       - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-180}
       - OLLAMA_NUM_CTX=${OLLAMA_NUM_CTX:-8192}
       # Gemini Configuration

@@ -29,5 +29,5 @@ lines-after-imports = 1
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests"]
+testpaths = ["tests", "backend/tests"]
 python_files = "test_*.py"

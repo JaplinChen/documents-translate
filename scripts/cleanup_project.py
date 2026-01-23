@@ -1,107 +1,95 @@
 import os
 import shutil
 import argparse
+from pathlib import Path
 
-def cleanup():
-    parser = argparse.ArgumentParser(description="PPTX-Translate Project Cleanup Script")
-    parser.add_argument("--dry-run", action="store_true", help="List files to be deleted without actual removal")
-    parser.add_argument("--force", action="store_true", help="Skip confirmation before deletion")
-    args = parser.parse_args()
-
-    # Targets to delete (folders and files)
-    FOLDERS_TO_CLEAN = [
-        "__pycache__",
+# 配置清理目標 (分類)
+TARGETS = {
+    "CACHE": [
+        "frontend/dist",
+        "backend/__pycache__",
         ".pytest_cache",
         ".mypy_cache",
-        "build",
-        "dist",
-    ]
-    
-    FILES_TO_CLEAN = [
-        "backend_logs.txt",
-        "overlap_recursive.txt",
-    ]
-    
-    FILE_EXTENSIONS_TO_CLEAN = [
-        ".log",
-        ".tmp",
-        ".bak",
-        ".DS_Store",
-    ]
-
-    # Orphaned scripts identified in audit
-    ORPHANED_SCRIPTS = [
+        "**/.DS_Store",
+    ],
+    "TEMP_ARTIFACTS": [
+        "release_package",
+        "*.tar",
+        "install_log.txt",
+        "backend/test_zip_dup.py",
+    ],
+    "DEBUG_SCRIPTS": [
+        "debug_ollama_connection.py",
         "check_env.py",
-        "inspect_debug.py",
-        "verify_refresh.py",
-        "verify_translategemma.py",
-        "程式碼審查報告.md",
+        "build.cmd",
+    ],
+    "LOGS": [
+        "*.log",
+        "*.tmp",
+        "*.bak",
     ]
+}
 
-    to_delete_folders = []
-    to_delete_files = []
+def get_to_delete(project_root):
+    to_delete = []
+    
+    # 處理精確路徑與 glob
+    for category, paths in TARGETS.items():
+        for pattern in paths:
+            if "**/" in pattern:
+                # 遞迴搜尋
+                p_clean = pattern.replace("**/", "")
+                for p in project_root.rglob(p_clean):
+                    to_delete.append((p, category))
+            elif "*" in pattern:
+                # 目錄下的 glob
+                for p in project_root.glob(pattern):
+                    to_delete.append((p, category))
+            else:
+                # 精確路徑
+                p = project_root / pattern
+                if p.exists():
+                    to_delete.append((p, category))
+    return to_delete
 
-    # Scan for folders
-    for root, dirs, files in os.walk("."):
-        # Exclude node_modules and .venv
-        if "node_modules" in dirs:
-            dirs.remove("node_modules")
-        if ".venv" in dirs:
-            dirs.remove(".venv")
-            
-        for d in dirs:
-            if d in FOLDERS_TO_CLEAN:
-                to_delete_folders.append(os.path.abspath(os.path.join(root, d)))
-        
-        for f in files:
-            path = os.path.abspath(os.path.join(root, f))
-            # Check specific files
-            if f in FILES_TO_CLEAN:
-                to_delete_files.append(path)
-            # Check extensions
-            elif any(f.endswith(ext) for ext in FILE_EXTENSIONS_TO_CLEAN):
-                to_delete_files.append(path)
-            # Check orphaned scripts in root
-            elif root == "." and f in ORPHANED_SCRIPTS:
-                to_delete_files.append(path)
+def cleanup(dry_run=True):
+    # 腳本位在 scripts/，root 為上一層
+    project_root = Path(__file__).parent.parent.absolute()
+    all_to_delete = get_to_delete(project_root)
 
-    if not to_delete_folders and not to_delete_files:
-        print("No cleanup targets found.")
+    if not all_to_delete:
+        print("Done. No items found to clean.")
         return
 
-    print("=== Cleanup Targets ===")
-    for folder in to_delete_folders:
-        print(f"[FOLDER] {folder}")
-    for file in to_delete_files:
-        print(f"[FILE]   {file}")
-    print("========================")
+    print(f"{' [DRY RUN] ' if dry_run else ' [LIVE RUN] '} Proposed items for removal:")
+    print("-" * 50)
+    for p, cat in sorted(all_to_delete, key=lambda x: x[1]):
+        rel_path = p.relative_to(project_root)
+        print(f"[{cat:15}] {rel_path}")
+    print("-" * 50)
 
-    if args.dry_run:
-        print("\nDry-run mode enabled. No files were deleted.")
+    if dry_run:
+        print("\nNote: This was a dry run. Use --no-dry-run to perform actual deletion.")
         return
 
-    if not args.force:
-        confirm = input(f"\nFound {len(to_delete_folders)} folders and {len(to_delete_files)} files. Proceed with deletion? (y/N): ")
-        if confirm.lower() != 'y':
-            print("Cleanup cancelled.")
-            return
-
-    # Execution
-    for folder in to_delete_folders:
-        try:
-            shutil.rmtree(folder)
-            print(f"Deleted folder: {folder}")
-        except Exception as e:
-            print(f"Error deleting folder {folder}: {e}")
-
-    for file in to_delete_files:
-        try:
-            os.remove(file)
-            print(f"Deleted file: {file}")
-        except Exception as e:
-            print(f"Error deleting file {file}: {e}")
-
-    print("\nCleanup completed.")
+    confirm = input("\nAre you sure you want to delete these items? (y/N): ").lower()
+    if confirm == 'y':
+        for p, _ in all_to_delete:
+            try:
+                if p.is_dir():
+                    shutil.rmtree(p)
+                else:
+                    p.unlink()
+                print(f"Deleted: {p.relative_to(project_root)}")
+            except Exception as e:
+                print(f"Error deleting {p}: {e}")
+        print("\nCleanup cycle completed.")
+    else:
+        print("\nCleanup aborted by user.")
 
 if __name__ == "__main__":
-    cleanup()
+    parser = argparse.ArgumentParser(description="PPTX-Translate Codebase Cleanup Tool")
+    parser.add_argument("--no-dry-run", action="store_true", help="Perform actual deletion")
+    args = parser.parse_args()
+
+    cleanup(dry_run=not args.no_dry_run)

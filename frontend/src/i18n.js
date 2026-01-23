@@ -18,6 +18,8 @@ i18n
     .init({
         resources,
         fallbackLng: 'zh-TW',
+        load: 'languageOnly',
+        nonExplicitSupportedLngs: true,
         interpolation: {
             escapeValue: false, // not needed for react as it escapes by default
         },

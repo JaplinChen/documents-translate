@@ -1,196 +1,101 @@
-# 企業級 PPTX 翻譯與校正控制台
+# 企業級 PPTX 翻譯與校正控制台 (PPTX-Translate)
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
-[![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/license-內部使用-lightgrey.svg)]()
 
-> 內部文件翻譯工具，支援 PPTX 與 DOCX 格式
+> 專為企業內部文件設計的翻譯與樣式校正工具，支援 PPTX 格式。
 
-## 功能特色
+## 🌟 重點功能
 
-- 🌐 **多語言支援**：自動偵測語言，支援中文（繁體/簡體）、越南語、英語、日語、韓語
-- 🤖 **多 LLM 提供者**：Ollama（本機）、Gemini、OpenAI
-- 📝 **翻譯記憶庫**：SQLite 儲存，支援術語表與翻譯記憶
-- 🎨 **校正模式**：色彩標示校正內容
-- 📄 **雙語輸出**：同時保留原文與譯文
-- 🐳 **Docker 部署**：一鍵啟動前後端服務
-
----
-
-## 示範
-
-### 應用程式介面
-![應用程式介面](docs/screenshots/app-interface.png)
-
-### 翻譯過程
-![翻譯過程](docs/screenshots/translation-process.png)
+- 🌐 **高精度多語支援**：自動偵測語言，支援繁中、英、越、日、韓。
+- 🤖 **模型靈活切換**：整合 **Ollama (translategemma:4b)**、Gemini、OpenAI。
+- 💾 **翻譯記憶與術語**：內建 SQLite 儲存空間，確保企業專業術語一致性。
+- 🎨 **智慧校正介面**：視覺化標注翻譯內容，支援直接編輯與調整。
+- 📦 **安全發布機制**：支援「鏡像打包」模式，可保護原始碼進行跨電腦分發。
 
 ---
 
-## 快速開始
+## 🚀 快速安裝 (Windows)
 
-### 方式一：Docker 部署（推薦）
+這是最推薦的安裝方式，會自動處理所有環境依賴。
 
-```bash
-# 1. 啟動 Ollama（如需本機 LLM）
-OLLAMA_HOST=0.0.0.0 ollama serve
+### 1. 執行安裝
 
-# 2. 一鍵啟動
-./start_docker.sh
+雙擊執行根目錄下的 **`install.bat`** (將自動請求管理員限)。
 
-# 或手動啟動
-docker compose up -d --build
-```
+### 2. 腳本動作
 
-**存取位置**：
+- 自動透過 `winget` 安裝 **Docker Desktop** 與 **Ollama**。
+- 自動下載並設定 `translategemma:4b` 模型。
+- 自動載入 Docker 鏡像並啟動服務。
 
-- 前端：<http://localhost:5193>
-- 後端 API：<http://localhost:5001>
-- API 文件：<http://localhost:5001/docs>
+### 3. 存取位置
+
+- **前端介面**: [http://localhost:5193](http://localhost:5193)
+- **後端 API**: [http://localhost:5001](http://localhost:5001)
+- **API 文件**: [http://localhost:5001/docs](http://localhost:5001/docs)
 
 ---
 
-### 方式二：本機開發
+## 🛠️ 維護者指南
 
-**後端**
+### 📝 環境設定
 
-```bash
-pip install -r requirements.txt
-uvicorn backend.main:app --reload --port 5001
-```
+複製 `.env.example` 為 `.env` 或 `backend/.env` 並根據需求調整：
 
-**前端**
+- `OLLAMA_MODEL`: 預設為 `translategemma:4b`。
+- `TRANSLATE_LLM_MODE`: `real` (正式翻譯) 或 `mock` (測試用)。
 
-```bash
-cd frontend
-npm install
-npm run dev
+### 📦 安全打包與分發 (IP Protection)
+
+如果您需要將此系統交給其他單位且**不希望暴露原始碼**：
+
+1. 執行 `powershell -File scripts/export_images.ps1`。
+2. 將產出的 `release_package` 資料夾壓縮分發。
+3. 接收者僅需執行其中的 `install.bat` 即可運作。
+
+### 🧹 專案清理
+
+使用清理腳本移除快取與暫存檔：
+
+```powershell
+python scripts/cleanup_project.py --no-dry-run
 ```
 
 ---
 
-## 環境變數設定
-
-複製 `.env.example` 並填入設定：
-
-```bash
-# Server
-PORT=5001
-
-# LLM Providers
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen2.5:7b
-GEMINI_API_KEY=your_api_key
-OPENAI_API_KEY=your_api_key
-
-# Translation
-TRANSLATE_LLM_MODE=real    # real | mock
-LLM_CHUNK_SIZE=40
-LLM_MAX_RETRIES=2
-```
-
----
-
-## API 端點
-
-| 端點 | 方法 | 說明 |
-|------|------|------|
-| `/api/pptx/extract` | POST | 抽取 PPTX 文字區塊 |
-| `/api/pptx/languages` | POST | 偵測文件語言 |
-| `/api/pptx/translate` | POST | 翻譯文字區塊 |
-| `/api/pptx/apply` | POST | 套用翻譯並生成新檔案 |
-| `/api/llm/models` | POST | 取得 LLM 模型清單 |
-| `/api/tm/glossary` | GET/POST | 術語表管理 |
-| `/api/tm/entries` | GET/POST | 翻譯記憶管理 |
-| `/health` | GET | 健康檢查（Docker 用） |
-
----
-
-## 專案結構
+## 📂 專案結構
 
 ```
 PPTX-Translate/
-├── backend/
-│   ├── api/           # FastAPI 路由
-│   ├── services/      # 業務邏輯
-│   └── prompts/       # LLM 提示詞模板
-├── frontend/
-│   └── src/           # React 前端
-├── docs/              # 合約檔案
-├── data/              # 運行時資料
-├── Dockerfile.backend
-├── Dockerfile.frontend
-├── docker-compose.yml
-├── nginx.conf
-└── TECH_SPEC.md       # 完整技術規格
+├── install.bat          # [New] Windows 一鍵安裝進入點
+├── scripts/             # 自動化腳本 (安裝、打包、清理)
+├── backend/             # FastAPI 後端引擎
+│   ├── api/             # 路由定義 (Naming, Translation, TM)
+│   └── services/        # 核心翻譯與檔案處理邏輯
+├── frontend/            # React 前端控制台
+├── data/                # 運行時資料 (DB, Exports)
+├── Dockerfile.backend   # 後端容器定義
+├── Dockerfile.frontend  # 前端容器定義
+└── README.md            # 您正在閱讀的文件
 ```
 
 ---
 
-## 翻譯記憶庫
+## ℹ️ 技術規格
 
-- **資料庫**：`data/translation_memory.db`（SQLite）
-- **術語表**：優先套用，確保一致性
-- **翻譯記憶**：自動快取已翻譯內容
-
-**CSV 匯入格式**：
-
-```csv
-source_lang,target_lang,source_text,target_text,priority
-```
+詳細技術細節與 API 合約請參閱 [TECH_SPEC.md](TECH_SPEC.md)。
 
 ---
 
-## 限制說明
+## 👤 作者
 
-- 複雜排版與混合字型可能被簡化
-- 雙語模式可能讓版面略為重新流動
-- 校正樣式以整個圖形為單位
-- 不支援圖片文字辨識（OCR）
-- 不支援動畫與轉場
+- **VPIC1 Japlin Chen** - *初始開發與架構設計*
 
 ---
 
-## 貢獻指南
+## 🛡️ 授權與安全
 
-歡迎提交 Issue 和 Pull Request！
-
-### 開發設定
-
-1. Fork 此專案
-2. 建立功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交變更 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 開啟 Pull Request
-
-### 程式碼規範
-
-- 遵循 PEP 8 風格指南
-- 使用型別提示
-- 為新功能添加測試
-- 更新相關文檔
-
----
-
-## 技術文件
-
-詳細技術規格請參閱 [TECH_SPEC.md](TECH_SPEC.md)
-
----
-
-## 作者
-
-- **VPIC1 Japlin Chen** - *初始開發與維護*
-
-## 致謝
-
-- 感謝所有貢獻者
-- 特別感謝 OpenAI、Google Gemini 與 Ollama 團隊提供強大的 LLM 支援
-- 使用 FastAPI、React 與其他開源工具
-
----
-
-## 授權
-
-內部使用
+- **內部使用限定**
+- **資安規範**：本工具支援全區隔離運行 (Air-gapped) 當搭配 Ollama 使用時。
