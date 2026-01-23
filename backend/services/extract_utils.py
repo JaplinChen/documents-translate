@@ -83,8 +83,8 @@ def is_technical_terms_only(text: str) -> bool:
         return False
         
     # Patterns: 
-    is_all_caps = all(re.match(r"^[A-Z0-9_\-]+$", w) for w in words)
-    is_mixed_case = all(re.match(r"^[A-Z][a-z]*[A-Z][a-zA-Z]*$", w) for w in words)
+    is_all_caps = all(re.match(r"^[A-Z0-9_\-]+$", w) and len(w) <= 30 for w in words)
+    is_mixed_case = all(re.match(r"^[A-Z][a-z]*[A-Z][a-zA-Z]*$", w) and len(w) <= 30 for w in words)
     is_title_case = all(re.match(r"^[A-Z][a-z]+$", w) for w in words)
     is_pure_lower = all(re.match(r"^[a-z]+$", w) for w in words)
 

@@ -10,7 +10,8 @@
         "step3": "Translate",
         "step4": "Download",
         "manage": "Manage",
-        "settings": "Settings"
+        "settings": "Settings",
+        "history": "History"
     },
     "sidebar": {
         "mode": {

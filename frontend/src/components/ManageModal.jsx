@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDraggableModal } from "../hooks/useDraggableModal";
 import { API_BASE } from "../constants";
+import { X, Save, Edit, Trash2, Plus, Lock, FileText, Check, RotateCcw } from "lucide-react";
+import { IconButton } from "./common/IconButton";
 import PreserveTermsTab from "./manage/PreserveTermsTab";
 import HistoryTab from "./manage/HistoryTab";
 
@@ -145,9 +147,9 @@ export default function ManageModal({
     return (
         <div className="modal-backdrop">
             <div className="modal is-draggable" ref={modalRef} style={{ top: position.top, left: position.left }}>
-                <div className="modal-header draggable-handle" onMouseDown={onMouseDown}>
+                <div className="modal-header draggable-handle flex justify-between items-center" onMouseDown={onMouseDown}>
                     <h3>{t("manage.title")}</h3>
-                    <button className="icon-btn ghost !rounded-md" type="button" onClick={onClose}>×</button>
+                    <IconButton icon={X} onClick={onClose} size="sm" />
                 </div>
                 <div className="modal-tabs">
                     <button className={`tab-btn ${tab === "glossary" ? "is-active" : ""}`} type="button" onClick={() => setTab("glossary")}>{t("manage.tabs.glossary")}</button>
@@ -197,10 +199,14 @@ export default function ManageModal({
                                     {isGlossary ? (
                                         <>
                                             <input className="text-input col-span-1 text-center px-1" type="number" value={newEntry.priority} placeholder={t("manage.fields.priority")} onChange={(e) => setNewEntry((prev) => ({ ...prev, priority: e.target.value }))} />
-                                            <button className="btn primary col-span-1 h-9 min-h-[2.25rem] px-0 w-full flex items-center justify-center" type="button" onClick={handleCreate} title={t("manage.actions.add")}>＋</button>
+                                            <button className="btn primary col-span-1 h-9 min-h-[2.25rem] px-0 w-full flex items-center justify-center p-0" type="button" onClick={handleCreate} title={t("manage.actions.add")}>
+                                                <Plus size={18} />
+                                            </button>
                                         </>
                                     ) : (
-                                        <button className="btn primary col-span-2 h-9 min-h-[2.25rem] w-full" type="button" onClick={handleCreate}>{t("manage.actions.add")}</button>
+                                        <button className="btn primary col-span-2 h-9 min-h-[2.25rem] w-full flex items-center justify-center gap-1" type="button" onClick={handleCreate}>
+                                            <Plus size={18} /> {t("manage.actions.add")}
+                                        </button>
                                     )}
                                 </div>
                             </div>
@@ -266,25 +272,24 @@ function DataTable({ items, isGlossary, editingKey, draft, saving, makeKey, setD
                                 {isEditing ? <input className="data-input" type="number" value={row.priority ?? 0} onChange={(e) => setDraft((prev) => ({ ...prev, priority: e.target.value }))} /> : row.priority ?? 0}
                             </div>
                         )}
-                        <div className="data-cell data-actions">
+                        <div className="data-cell data-actions flex justify-end gap-1">
                             {isEditing ? (
                                 <>
-                                    <button className="action-btn-sm success" type="button" onClick={onSave} disabled={saving} title={t("manage.actions.save")}>✅</button>
-                                    <button className="action-btn-sm ghost" type="button" onClick={onCancel} disabled={saving} title={t("manage.actions.cancel")}>❌</button>
+                                    <IconButton icon={Check} variant="action" size="sm" onClick={onSave} disabled={saving} title={t("manage.actions.save")} />
+                                    <IconButton icon={RotateCcw} size="sm" onClick={onCancel} disabled={saving} title={t("manage.actions.cancel")} />
                                 </>
                             ) : (
                                 <>
-                                    <button className="action-btn-sm primary" type="button" onClick={() => onEdit(item)} title={t("manage.actions.edit")}>✏️</button>
+                                    <IconButton icon={Edit} size="sm" onClick={() => onEdit(item)} title={t("manage.actions.edit")} />
                                     {isGlossary && (
-                                        <button className="action-btn-sm primary" type="button" onClick={() => onConvertToPreserveTerm(item)} title={t("manage.actions.convert_preserve")}>🔒</button>
+                                        <IconButton icon={Lock} size="sm" onClick={() => onConvertToPreserveTerm(item)} title={t("manage.actions.convert_preserve")} />
                                     )}
                                     {!isGlossary && (
-                                        <button className="action-btn-sm primary" type="button" onClick={() => onConvertToGlossary(item)} title={t("manage.actions.convert_glossary")}>📑</button>
+                                        <IconButton icon={FileText} size="sm" onClick={() => onConvertToGlossary(item)} title={t("manage.actions.convert_glossary")} />
                                     )}
-                                    <button className="action-btn-sm danger" type="button" onClick={() => onDelete(item)} title={t("manage.actions.delete")}>🗑️</button>
+                                    <IconButton icon={Trash2} variant="danger" size="sm" onClick={() => handleDelete(item)} title={t("manage.actions.delete")} />
                                 </>
                             )}
-
                         </div>
                     </div>
                 );

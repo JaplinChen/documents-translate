@@ -17,6 +17,7 @@ from backend.api import (
     token_stats_router,
     xlsx_router,
     pdf_router,
+    style_router,
 )
 
 from backend.tools.logging_middleware import StructuredLoggingMiddleware
@@ -41,6 +42,7 @@ app.include_router(preserve_terms_router)
 app.include_router(token_stats_router)
 app.include_router(xlsx_router)
 app.include_router(pdf_router)
+app.include_router(style_router)
 app.include_router(export_router)
 
 

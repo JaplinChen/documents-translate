@@ -20,7 +20,7 @@ export function SidebarStep2({
                 <span className="accordion-indicator">▼</span>
             </div>
             <div className="accordion-content" style={{ maxHeight: open ? "800px" : "0", opacity: open ? 1 : 0 }}>
-                <div className="space-y-4 pt-2">
+                <div className="space-y-5 pt-4 pb-2 px-1">
                     <div className="row-group">
                         <div className="form-group">
                             <label className="field-label">{t("sidebar.mode.label")}</label>

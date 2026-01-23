@@ -9,6 +9,7 @@ from backend.api.tm import router as tm_router
 from backend.api.token_stats import router as token_stats_router
 from backend.api.xlsx import router as xlsx_router
 from backend.api.pdf import router as pdf_router
+from backend.api.style import router as style_router
 
 __all__ = [
     "docx_router",
@@ -22,4 +23,5 @@ __all__ = [
     "export_router",
     "xlsx_router",
     "pdf_router",
+    "style_router",
 ]

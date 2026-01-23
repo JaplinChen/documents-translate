@@ -12,30 +12,44 @@ def build_context(strategy: str, all_blocks: list[dict], chunk_blocks: list[dict
             continue
         blocks_by_slide.setdefault(slide_index, []).append(block)
 
-    chunk_slides = {block.get("slide_index") for block in chunk_blocks}
+    chunk_slides = sorted(list({block.get("slide_index") for block in chunk_blocks if block.get("slide_index") is not None}))
+    total_slides = max(blocks_by_slide.keys()) + 1 if blocks_by_slide else 0
+
     if strategy == "neighbor":
         context_blocks = []
         for slide_index in chunk_slides:
-            if slide_index is None:
-                continue
             for neighbor in (slide_index - 1, slide_index, slide_index + 1):
                 context_blocks.extend(blocks_by_slide.get(neighbor, []))
-        return {"strategy": "neighbor", "context_blocks": context_blocks}
+        return {
+            "strategy": "neighbor",
+            "context_blocks": context_blocks,
+            "current_slides": chunk_slides,
+            "total_slides": total_slides,
+        }
 
     if strategy == "title-only":
         title_blocks = []
         for slide_index in chunk_slides:
-            if slide_index is None:
-                continue
             slide_blocks = blocks_by_slide.get(slide_index, [])
             if slide_blocks:
+                # Try to pick a block that looks like a title (usually first or has specific characteristics)
                 title_blocks.append(slide_blocks[0])
-        return {"strategy": "title-only", "context_blocks": title_blocks}
+        return {
+            "strategy": "title-only",
+            "context_blocks": title_blocks,
+            "current_slides": chunk_slides,
+            "total_slides": total_slides,
+        }
 
     if strategy == "deck":
         deck_blocks = []
         for slide_index in sorted(blocks_by_slide.keys())[:2]:
             deck_blocks.extend(blocks_by_slide.get(slide_index, []))
-        return {"strategy": "deck", "context_blocks": deck_blocks}
+        return {
+            "strategy": "deck",
+            "context_blocks": deck_blocks,
+            "current_slides": chunk_slides,
+            "total_slides": total_slides,
+        }
 
     return None

@@ -7,14 +7,16 @@ import PromptTab from "./settings/PromptTab";
 import AiTab from "./settings/AiTab";
 import { FontSettings } from "./settings/FontSettings";
 
-const PROVIDERS = [
-  { id: "ollama", name: "Ollama", subKey: "ollama", icon: "💻" },
-  { id: "chatgpt", name: "ChatGPT (OpenAI)", subKey: "chatgpt", icon: "🤖" },
-  { id: "gemini", name: "Gemini", subKey: "gemini", icon: "✨" }
-];
-
+import { X, RotateCcw, Check, Monitor, Bot, Sparkles } from "lucide-react";
+import { IconButton } from "./common/IconButton";
 import { useSettingsPrompts } from "../hooks/useSettingsPrompts";
 import { SettingsSidebar } from "./settings/SettingsSidebar";
+
+const PROVIDERS = [
+  { id: "ollama", name: "Ollama", subKey: "ollama", icon: <Monitor size={20} /> },
+  { id: "chatgpt", name: "ChatGPT (OpenAI)", subKey: "chatgpt", icon: <Bot size={20} /> },
+  { id: "gemini", name: "Gemini", subKey: "gemini", icon: <Sparkles size={20} /> }
+];
 
 function SettingsModal({
   open, onClose, tab, setTab, llmProvider, setLlmProvider, llmApiKey, setLlmApiKey,
@@ -23,7 +25,7 @@ function SettingsModal({
   fillColor, setFillColor, textColor, setTextColor, lineColor, setLineColor,
   lineDash, setLineDash, llmTone, setLlmTone, useVisionContext, setUseVisionContext,
   useSmartLayout, setUseSmartLayout, onExtractGlossary, busy, status, apiBase,
-  fontMapping, setFontMapping
+  fontMapping, setFontMapping, similarityThreshold, setSimilarityThreshold
 }) {
   const { t } = useTranslation();
   const [showKey, setShowKey] = useState(false);
@@ -57,18 +59,18 @@ function SettingsModal({
                 {tab === "correction" && <h3>{t("settings.tabs.correction")} {t("settings.title")}</h3>}
                 {tab === "prompt" && <h3>{t("settings.tabs.prompt")} {t("settings.title")}</h3>}
               </div>
-              <div className="header-actions">
+              <div className="header-actions flex gap-1">
                 {tab === "prompt" ? (
                   <>
-                    <span className="text-xs text-green-600 mr-2">{promptStatus}</span>
-                    <button className="btn-icon-action" type="button" onClick={handleResetPrompt} title={t("settings.prompt.reset")}>↺</button>
-                    <button className="btn-icon-action" type="button" onClick={onClose} title={t("settings.prompt.close")}>✕</button>
-                    <button className="btn-icon-action text-primary border-primary" type="button" onClick={() => handleSavePrompt(onClose)} title={t("settings.prompt.save")}>✔</button>
+                    <span className="text-xs text-green-600 mr-2 flex items-center">{promptStatus}</span>
+                    <IconButton icon={RotateCcw} onClick={handleResetPrompt} title={t("settings.prompt.reset")} size="sm" />
+                    <IconButton icon={X} onClick={onClose} title={t("settings.prompt.close")} size="sm" />
+                    <IconButton icon={Check} variant="action" onClick={() => handleSavePrompt(onClose)} title={t("settings.prompt.save")} size="sm" />
                   </>
                 ) : (
                   <>
-                    <button className="btn-icon-action" type="button" onClick={onClose}>✕</button>
-                    <button className="btn-icon-action text-primary border-primary" type="button" onClick={tab === "llm" ? onSave : onSaveCorrection}>✔</button>
+                    <IconButton icon={X} onClick={onClose} size="sm" />
+                    <IconButton icon={Check} variant="action" onClick={tab === "llm" ? onSave : onSaveCorrection} size="sm" />
                   </>
                 )}
               </div>
@@ -97,6 +99,7 @@ function SettingsModal({
                   fillColor={fillColor} setFillColor={setFillColor} textColor={textColor}
                   setTextColor={setTextColor} lineColor={lineColor} setLineColor={setLineColor}
                   lineDash={lineDash} setLineDash={setLineDash}
+                  similarityThreshold={similarityThreshold} setSimilarityThreshold={setSimilarityThreshold}
                 />
               )}
               {tab === "prompt" && (

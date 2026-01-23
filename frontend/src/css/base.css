@@ -12,26 +12,33 @@
     --accent-soft: #eff6ff;
 
     /* 背景層次 (淡色高對比方案) */
-    --bg-main: #f0f4f8;
-    /* 稍微加深的背景色，使內容區塊更明確 */
-    --bg-sidebar: #e5ebf2;
-    /* 側邊欄專用色，與主背景拉出層次 */
+    --bg-main: #f8fafc;
+    --bg-sidebar: #f1f5f9;
     --bg-card: #ffffff;
-    /* 浮動卡片必須是純白以產生最高對比 */
+    --bg-hover: #f1f5f9;
 
     /* 文字層次 */
     --text-heading: #0f172a;
-    /* slate-950，用於標題 */
-    --text-main: #1e293b;
-    /* slate-800，用於本文 */
+    --text-main: #334155;
     --text-muted: #64748b;
-    /* slate-500，用於副標題與說明 */
 
     /* 邊框層次 */
     --border-strong: #cbd5e1;
-    /* slate-300，確保邊界清晰 */
     --border-soft: #e2e8f0;
-    /* slate-200 */
+
+    /* 圓角規範 */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    /* 陰影規範 */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    /* 動畫過渡 */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 
     /* 校正模式顏色 */
     --correction-fill: #fef9c3;

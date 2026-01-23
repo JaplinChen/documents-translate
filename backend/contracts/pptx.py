@@ -5,18 +5,23 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-
 class PPTXBlock(BaseModel):
     slide_index: int
     shape_id: int
-    block_type: Literal["textbox", "table_cell", "notes"]
+    block_type: Literal["textbox", "table_cell", "notes", "spreadsheet_cell", "pdf_text_block"]
     source_text: str
     translated_text: str = ""
     client_id: str | None = None
     mode: Literal["direct", "bilingual", "correction"] = "direct"
     # Layout info (in Points)
+    x: float = 0.0
+    y: float = 0.0
+    width: float = 0.0
     height: float = 0.0
-    
+    # Style info
+    font_size: float | None = None
+    font_name: str | None = None
+
     class Config:
         extra = "allow"
 
@@ -41,7 +46,7 @@ def _model_validate(model_cls, data: dict) -> BaseModel:
 def make_block(
     slide_index: int,
     shape_id: int,
-    block_type: Literal["textbox", "table_cell", "notes"],
+    block_type: Literal["textbox", "table_cell", "notes", "spreadsheet_cell", "pdf_text_block"],
     source_text: str,
     translated_text: str = "",
     mode: Literal["direct", "bilingual", "correction"] = "direct",

@@ -49,6 +49,7 @@ async def pptx_translate(
     vision_context: bool = Form(True),
     smart_layout: bool = Form(True),
     refresh: bool = Form(False),
+    similarity_threshold: float = Form(0.75),
 ) -> dict:
     """Translate text blocks using LLM."""
     llm_mode = settings.translate_llm_mode
@@ -108,7 +109,12 @@ async def pptx_translate(
     result_blocks = translated.get("blocks", [])
     if mode == "correction":
         translated_texts = [b.get("translated_text", "") for b in result_blocks]
-        result_blocks = apply_correction_mode(blocks_data, translated_texts, target_language)
+        result_blocks = apply_correction_mode(
+            blocks_data,
+            translated_texts,
+            target_language,
+            similarity_threshold=similarity_threshold,
+        )
 
     return {
         "mode": mode,
@@ -137,6 +143,7 @@ async def pptx_translate_stream(
     smart_layout: bool = Form(True),
     refresh: bool = Form(False),
     completed_ids: str | None = Form(None),
+    similarity_threshold: float = Form(0.75),
 ) -> StreamingResponse:
     """Translate text blocks and stream progress via SSE."""
     print(f"[API_DEBUG] /translate-stream called. refresh={refresh}, provider={provider}", flush=True)
@@ -240,6 +247,7 @@ async def pptx_translate_stream(
                             effective_blocks,
                             translated_texts,
                             target_language,
+                            similarity_threshold=similarity_threshold,
                         )
                     yield f"event: complete\ndata: {json.dumps(result)}\n\n"
                     break

@@ -15,3 +15,5 @@ python-dotenv
 reportlab
 openpyxl
 pymupdf
+pytesseract
+pdf2image

@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Palette, Type, Square, Sliders, CheckCircle2, Bot } from "lucide-react";
 
 function CorrectionTab({
     fillColor,
@@ -9,117 +10,141 @@ function CorrectionTab({
     lineColor,
     setLineColor,
     lineDash,
-    setLineDash
+    setLineDash,
+    similarityThreshold,
+    setSimilarityThreshold
 }) {
     const { t } = useTranslation();
 
-    // Mapping for style values to CSS
     const getBorderStyle = (dash) => {
         switch (dash) {
             case "dot": return "dotted";
             case "dash": return "dashed";
-            case "dashdot": return "dashed"; // approximated for CSS
+            case "dashdot": return "dashed";
             case "solid": return "solid";
             default: return "solid";
         }
     };
 
     return (
-        <div className="tab-pane">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="tab-pane animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                {/* Left Column: Preview */}
-                <div className="flex flex-col gap-2">
-                    <label className="field-label text-blue-600 font-bold">{t("settings.correction.preview")}</label>
-                    <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center relative overflow-hidden">
-                        {/* Background Grid Pattern for Transparency Check */}
-                        <div className="absolute inset-0 opacity-10"
-                            style={{
-                                backgroundImage: "radial-gradient(#000 1px, transparent 1px)",
-                                backgroundSize: "10px 10px"
-                            }}
-                        ></div>
+                {/* Left: Preview Cabinet */}
+                <div className="lg:col-span-5 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Palette size={18} className="text-blue-500" />
+                        <label className="text-sm font-bold text-slate-700">{t("settings.correction.preview")}</label>
+                    </div>
 
-                        {/* The Actual Preview Box */}
-                        <div
-                            className="px-4 py-2 text-sm font-medium z-10 transition-all duration-300"
-                            style={{
-                                backgroundColor: fillColor,
-                                color: textColor,
-                                border: `2px ${getBorderStyle(lineDash)} ${lineColor}`,
-                                borderRadius: "4px"
-                            }}
-                        >
-                            {t("settings.correction.preview_content")}
+                    <div className="relative group">
+                        <div className="w-full h-48 bg-slate-100/50 border border-slate-200 rounded-3xl flex items-center justify-center overflow-hidden shadow-inner ring-4 ring-slate-50">
+                            {/* Grid Backdrop */}
+                            <div className="absolute inset-0 opacity-[0.03]"
+                                style={{
+                                    backgroundImage: "conic-gradient(#000 0.25turn, transparent 0.25turn 0.5turn, #000 0.5turn 0.75turn, transparent 0.75turn)",
+                                    backgroundSize: "20px 20px"
+                                }}
+                            ></div>
+
+                            {/* Main Preview Box */}
+                            <div
+                                className="px-6 py-3 text-base font-bold z-10 transition-all duration-500 shadow-xl"
+                                style={{
+                                    backgroundColor: fillColor,
+                                    color: textColor,
+                                    border: `3px ${getBorderStyle(lineDash)} ${lineColor}`,
+                                    borderRadius: "12px",
+                                    transform: "rotate(-1deg)"
+                                }}
+                            >
+                                {t("settings.correction.preview_content")}
+                            </div>
                         </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">
-                        * {t("settings.ai.tone_hint") /* Reusing a hint style or add new if needed, for now just empty or generic hint */}
-                    </p>
+
+                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
+                        <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
+                            <Bot size={12} className="inline mr-1 mb-0.5" />
+                            {t("settings.correction.hint") || "提示：視覺樣式將套用於 Powerpoint 的校正標記中。調整閾值可控制校正強度。"}
+                        </p>
+                    </div>
                 </div>
 
-                {/* Right Column: Controls */}
-                <div className="flex flex-col gap-4">
+                {/* Right: Master Controls */}
+                <div className="lg:col-span-7 flex flex-col gap-6">
 
-                    {/* Colors */}
-                    <div className="settings-section pt-0 border-none">
-                        <label className="field-label mb-3 block">{t("settings.correction.fill_color")}</label>
-                        <div className="flex items-center gap-3">
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                                <input
-                                    type="color"
-                                    className="absolute inset-0 w-[150%] h-[150%] -left-[25%] -top-[25%] p-0 m-0 cursor-pointer border-none outline-none"
-                                    value={fillColor}
-                                    onChange={(e) => setFillColor(e.target.value)}
-                                />
+                    {/* Logic Control: Similarity */}
+                    <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <Sliders size={18} className="text-indigo-500" />
+                                <span className="text-sm font-bold text-slate-700">相似度閾值 (Sensitivity)</span>
                             </div>
-                            <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">{fillColor}</span>
+                            <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                {Math.round(similarityThreshold * 100)}%
+                            </span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0" max="1" step="0.05"
+                            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            value={similarityThreshold}
+                            onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
+                        />
+                        <div className="flex justify-between mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                            <span>寬鬆 (改寫多)</span>
+                            <span>嚴謹 (僅校對)</span>
                         </div>
                     </div>
 
-                    <div className="settings-section pt-0 border-none">
-                        <label className="field-label mb-3 block">{t("settings.correction.text_color")}</label>
-                        <div className="flex items-center gap-3">
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                                <input
-                                    type="color"
-                                    className="absolute inset-0 w-[150%] h-[150%] -left-[25%] -top-[25%] p-0 m-0 cursor-pointer border-none outline-none"
-                                    value={textColor}
-                                    onChange={(e) => setTextColor(e.target.value)}
-                                />
-                            </div>
-                            <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">{textColor}</span>
+                    {/* Style Control: Palette */}
+                    <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                        <div className="flex items-center gap-2 mb-5">
+                            <Palette size={18} className="text-pink-500" />
+                            <span className="text-sm font-bold text-slate-700">主題色彩規範</span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                            {[
+                                { id: 'fill', label: '底色', val: fillColor, setter: setFillColor },
+                                { id: 'text', label: '文字', val: textColor, setter: setTextColor },
+                                { id: 'line', label: '外框', val: lineColor, setter: setLineColor }
+                            ].map(item => (
+                                <div key={item.id} className="flex flex-col items-center gap-3">
+                                    <div className="relative group">
+                                        <div className="w-12 h-12 rounded-2xl border-2 border-white shadow-lg cursor-pointer overflow-hidden ring-1 ring-slate-200 transition-transform hover:scale-110 active:scale-95"
+                                            style={{ backgroundColor: item.val }}>
+                                            <input
+                                                type="color"
+                                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                                value={item.val}
+                                                onChange={(e) => item.setter(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase">{item.label}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="settings-section pt-0 border-none">
-                        <label className="field-label mb-3 block">{t("settings.correction.border_color")}</label>
-                        <div className="flex items-center gap-3">
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                                <input
-                                    type="color"
-                                    className="absolute inset-0 w-[150%] h-[150%] -left-[25%] -top-[25%] p-0 m-0 cursor-pointer border-none outline-none"
-                                    value={lineColor}
-                                    onChange={(e) => setLineColor(e.target.value)}
-                                />
-                            </div>
-                            <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">{lineColor}</span>
+                    {/* Border Style */}
+                    <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Square size={18} className="text-emerald-500" />
+                            <span className="text-sm font-bold text-slate-700">線條樣式</span>
                         </div>
-                    </div>
-
-                    {/* Style */}
-                    <div className="settings-section pt-0 border-none mt-2">
-                        <label className="field-label mb-2 block">{t("settings.correction.border_style")}</label>
                         <div className="flex gap-2">
                             {['solid', 'dash', 'dot', 'dashdot'].map(style => (
                                 <button
                                     key={style}
                                     type="button"
                                     onClick={() => setLineDash(style)}
-                                    className={`flex-1 py-2 px-1 rounded-md border text-xs font-medium transition-all
+                                    className={`flex-1 py-2.5 rounded-xl border-2 transition-all duration-200 text-[10px] font-black uppercase tracking-tighter
                                         ${lineDash === style
-                                            ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
-                                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                                            : 'bg-white border-slate-50 text-slate-400 hover:border-slate-200'
                                         }`}
                                 >
                                     {t(`settings.correction.${style}`)}

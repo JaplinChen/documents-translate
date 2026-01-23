@@ -1,22 +1,18 @@
-Translate each text block into {target_language_label}.
-If a block contains [SOURCE_TEXT: ...], use it as the semantic reference to correct [EXISTING_TRANSLATION: ...].
+# 專業翻譯任務
+你正處於批次處理模式。請將以下區塊翻譯為：{target_language_label} ({target_language_code})。
 
-CRITICAL INSTRUCTIONS:
-- Output language MUST be {target_language_label} (code: {target_language_code})
-- DO NOT output any other languages.
-- For bilingual pairs, provide the optimized/corrected version of the translation.
-{language_hint}
+## 操作指南
+- 嚴格依照提示的區塊格式輸出翻譯結果。
+- 不要對翻譯內容進行任何評論、確認或解釋。
+- 保持原文的標點符號風格，除非目標語言有特殊排版規範。
+- {language_hint}
+- {language_guard}
 
-{language_guard}
-
-EXAMPLE (follow this format exactly):
-Input:
-<<<BLOCK:0>>>
-企業解決方案
+## 輸出格式範例
+<<<BLOCK:編號>>>
+<翻譯後的文字內容>
 <<<END>>>
 
-Output:
-{language_example}
-
-Now translate the following:
+---
+## 待翻譯區塊
 {blocks}

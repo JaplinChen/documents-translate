@@ -101,7 +101,8 @@ export const useSettingsStore = create(
                 fillColor: "#FFF16A",
                 textColor: "#D90000",
                 lineColor: "#7B2CB9",
-                lineDash: "dash"
+                lineDash: "dash",
+                similarityThreshold: 0.75
             },
             setCorrection: (key, value) => set(state => ({
                 correction: { ...state.correction, [key]: value }

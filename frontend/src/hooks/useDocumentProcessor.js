@@ -27,8 +27,10 @@ export function useDocumentProcessor() {
     const getFileType = () => {
         if (!file) return null;
         const ext = file.name.split('.').pop().toLowerCase();
-        return ext === 'pptx' ? 'pptx' : (ext === 'docx' ? 'docx' : null);
+        const supported = ['pptx', 'docx', 'xlsx', 'pdf'];
+        return supported.includes(ext) ? ext : null;
     };
+
 
     const readErrorDetail = async (response, fallback) => {
         const errorText = await response.text();
@@ -145,6 +147,7 @@ export function useDocumentProcessor() {
                 if (llmBaseUrl) formData.append("base_url", llmBaseUrl);
                 formData.append("ollama_fast_mode", llmFastMode ? "true" : "false");
                 formData.append("refresh", refresh ? "true" : "false");
+                formData.append("similarity_threshold", correction.similarityThreshold?.toString() || "0.75");
 
                 if (completedIds.length > 0) {
                     formData.append("completed_ids", JSON.stringify(completedIds));

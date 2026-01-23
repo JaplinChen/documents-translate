@@ -55,7 +55,7 @@ export function Sidebar({
                                     {!isFileSelected && <span className="text-sub">{t("sidebar.upload.limit")}</span>}
                                     {isFileSelected && <span className="text-sub text-blue-600">{t("sidebar.upload.ready")}</span>}
                                 </div>
-                                <input className="file-input-hidden" type="file" accept=".pptx,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                                <input className="file-input-hidden" type="file" accept=".pptx,.docx,.xlsx,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
                             </label>
                         </div></div>
                     </div>

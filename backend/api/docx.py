@@ -137,6 +137,7 @@ async def docx_translate_stream(
     smart_layout: bool = Form(True),
     refresh: bool = Form(False),
     completed_ids: str | None = Form(None),
+    similarity_threshold: float = Form(0.75),
 ) -> StreamingResponse:
     """Translate text blocks and stream progress via SSE."""
     try:
@@ -216,6 +217,7 @@ async def docx_translate_stream(
                             effective_blocks,
                             translated_texts,
                             target_language,
+                            similarity_threshold=similarity_threshold,
                         )
                     yield f"event: complete\ndata: {json.dumps(result)}\n\n"
                     break

@@ -36,9 +36,9 @@ def build_ollama_batch_prompt(
     hint = get_language_hint(target_language)
     example = get_language_example(target_language)
     language_guard = (
-        "Every line MUST be in the target language. Verify language consistency."
+        f"【絕對指令】輸出的每一行、各區塊內容都「必須」使用目標語言 {label}。嚴禁出現原文、引導語或解釋。"
         if strict
-        else "Every line MUST be in the target language."
+        else f"輸出的每個區塊內容必須使用目標語言 {label}。"
     )
 
     blocks_lines: list[str] = []
@@ -77,13 +77,15 @@ def build_ollama_batch_prompt(
             f"目標語言代碼：{target_language}",
             hint,
             language_guard,
-            "請保留標記並只輸出翻譯文字。",
-            "格式：",
+            "請參考正確輸出風格：",
+            example,
+            "",
+            "請保留標記並只輸出翻譯文字。格式：",
             "<<<BLOCK:0>>>",
             "<翻譯文字>",
             "<<<END>>>",
             "",
-            "輸入：",
+            "待翻譯輸入：",
             blocks_text,
         ]
         return "\n".join(parts)

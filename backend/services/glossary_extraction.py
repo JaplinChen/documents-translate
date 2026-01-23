@@ -11,6 +11,7 @@ from backend.services.llm_clients import (
     OpenAITranslator,
     TranslationConfig,
 )
+from backend.services.translate_config import get_language_hint, get_language_label
 
 LOGGER = logging.getLogger(__name__)
 
@@ -104,22 +105,12 @@ def extract_glossary_terms(
     # Limit text size to avoid token limit
     text_sample = full_text[:10000]
 
-    prompt = f"""請分析以下簡報內容，提取出重要的跨頁面術語、專有名詞或縮寫。
-目標語言：{target_language}
-
-要求：
-1. 只提取真正核心的專有名詞。
-2. 針對每個術語，提供建議的翻譯。
-3. 輸出必須是 JSON 陣列，格式如下：
-[
-  {{"source": "原文", "target": "建議翻譯", "reason": "提取原因 (簡短)"}}
-]
-
-簡報內容：
----
-{text_sample}
----
-"""
+    from backend.services.prompt_store import render_prompt
+    prompt = render_prompt("glossary_extraction", {
+        "target_language": get_language_label(target_language),
+        "text_sample": text_sample,
+        "language_hint": get_language_hint(target_language)
+    })
 
     try:
         if hasattr(client, "complete"):

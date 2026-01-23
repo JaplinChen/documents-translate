@@ -5,41 +5,13 @@ from collections.abc import Iterable
 
 from backend.services.prompt_store import render_prompt
 
-_LANGUAGE_LABELS = {
-    "zh-TW": "Traditional Chinese (zh-TW)",
-    "zh-CN": "Simplified Chinese (zh-CN)",
-    "zh": "Chinese (zh)",
-    "vi": "Vietnamese (vi)",
-    "en": "English (en)",
-    "ja": "Japanese (ja)",
-    "ko": "Korean (ko)",
-}
-
-_LANGUAGE_HINTS = {
-    "vi": (
-        "【重要】必須使用越南語（Tiếng Việt）翻譯。\n"
-        "請使用正確的越南語字母與聲調符號（ă, â, ê, ô, ơ, ư, đ），例如：\n"
-        "- 「解決方案」→ Giải pháp（不是 Solusyon）\n"
-        "- 「自動」→ Tự động（不是 Automated）\n"
-        "- 「影片」→ Video\n"
-        "嚴禁輸出 Tagalog（菲律賓語）、Spanish、English 等其他語言。"
-    ),
-    "zh-TW": "請使用繁體中文。",
-    "zh-CN": "請使用簡體中文。",
-    "zh": "請使用中文。",
-    "en": "Please respond in English.",
-    "ja": "日本語で回答してください。",
-    "ko": "한국어로 답해주세요。",
-}
-
-
-def _language_hint(code: str) -> str:
-    return _LANGUAGE_HINTS.get((code or "").strip(), "")
-
-
-def _language_label(code: str) -> str:
-    normalized = (code or "").strip()
-    return _LANGUAGE_LABELS.get(normalized, normalized or code)
+from backend.services.translate_config import (
+    LANGUAGE_HINTS,
+    LANGUAGE_LABELS,
+    get_language_hint as _language_hint,
+    get_language_label as _language_label,
+    get_language_example as _language_example,
+)
 
 
 def build_prompt(
@@ -76,6 +48,7 @@ def build_prompt(
             {
                 "payload": payload,
                 "language_hint": combined_hint,
+                "language_example": _language_example(target_language),
                 "target_language_label": _language_label(target_language),
                 "target_language_code": target_language,
             },

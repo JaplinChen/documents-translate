@@ -213,6 +213,7 @@ function App() {
         textColor={settings.correction.textColor} setTextColor={(v) => settings.setCorrection("textColor", v)}
         lineColor={settings.correction.lineColor} setLineColor={(v) => settings.setCorrection("lineColor", v)}
         lineDash={settings.correction.lineDash} setLineDash={(v) => settings.setCorrection("lineDash", v)}
+        similarityThreshold={settings.correction.similarityThreshold} setSimilarityThreshold={(v) => settings.setCorrection("similarityThreshold", v)}
 
         llmTone={settings.ai.tone} setLlmTone={(v) => settings.setAiOption("tone", v)}
         useVisionContext={settings.ai.useVision} setUseVisionContext={(v) => settings.setAiOption("useVision", v)}
