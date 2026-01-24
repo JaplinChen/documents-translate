@@ -61,9 +61,9 @@ echo
 echo "================================"
 echo "  Access URLs                   "
 echo "================================"
-echo "  Frontend: http://localhost:5193"
-echo "  Backend:  http://localhost:5001"
-echo "  API Docs: http://localhost:5001/docs"
+echo "  Frontend: http://localhost:5194"
+echo "  Backend:  http://localhost:5002"
+echo "  API Docs: http://localhost:5002/docs"
 echo "================================"
 echo
 echo "Container Logs summary:"

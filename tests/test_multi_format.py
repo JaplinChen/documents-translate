@@ -1,7 +1,7 @@
 import requests
 import os
 
-API_BASE = "http://localhost:5001"
+API_BASE = "http://localhost:5002"
 
 def test_extract(file_path, file_type):
     url = f"{API_BASE}/api/{file_type}/extract"
@@ -20,4 +20,4 @@ if __name__ == "__main__":
     # Note: This test requires a running backend and sample files.
     # Since I cannot run the backend in a long-lived process here, 
     # this script is for the user or manual verification.
-    print("Test script ready. Please ensure backend is running at http://localhost:5001")
+    print("Test script ready. Please ensure backend is running at http://localhost:5002")

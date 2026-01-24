@@ -148,9 +148,26 @@
         "tabs": {
             "llm": "LLM",
             "ai": "AI 智控",
+            "ocr": "OCR",
             "correction": "校正",
             "prompt": "Prompt",
             "fonts": "字體"
+        },
+        "ocr": {
+            "title": "OCR 參數",
+            "desc": "調整掃描品質與辨識條件，僅影響 PDF OCR。",
+            "dpi": "DPI",
+            "dpi_hint": "建議 200-400，數值越高速度越慢",
+            "conf_min": "信心門檻",
+            "conf_min_hint": "0-100，數值越高越嚴格",
+            "psm": "PSM 模式",
+            "psm_hint": "建議 6/7（單行或單區塊）",
+            "engine": "OCR 引擎",
+            "engine_hint": "建議 PaddleOCR（掃描文件較準）",
+            "lang": "語言",
+            "lang_hint": "範例：chi_tra+vie+eng",
+            "poppler_path": "Poppler 路徑",
+            "poppler_hint": "本機模式需指定 poppler 的 bin 目錄"
         },
         "prompt": {
             "empty": "尚無 Prompt",

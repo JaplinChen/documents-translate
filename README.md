@@ -32,9 +32,9 @@
 
 ### 3. 存取位置
 
-- **前端介面**: [http://localhost:5193](http://localhost:5193)
-- **後端 API**: [http://localhost:5001](http://localhost:5001)
-- **API 文件**: [http://localhost:5001/docs](http://localhost:5001/docs)
+- **前端介面**: [http://localhost:5194](http://localhost:5194)
+- **後端 API**: [http://localhost:5002](http://localhost:5002)
+- **API 文件**: [http://localhost:5002/docs](http://localhost:5002/docs)
 
 ---
 

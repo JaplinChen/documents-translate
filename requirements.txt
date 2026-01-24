@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 httpx
+setuptools
 python-docx
 python-multipart
 python-pptx
@@ -17,3 +18,8 @@ openpyxl
 pymupdf
 pytesseract
 pdf2image
+pdfplumber
+paddleocr==2.7.3
+paddlepaddle==3.2.2
+opencv-python-headless
+numpy==1.26.4

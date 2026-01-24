@@ -13,10 +13,8 @@ export const useUIStore = create((set) => ({
     // --- Modals ---
     llmOpen: false,
     manageOpen: false,
-    historyOpen: false,
     setLlmOpen: (open) => set({ llmOpen: open }),
     setManageOpen: (open) => set({ manageOpen: open }),
-    setHistoryOpen: (open) => set({ historyOpen: open }),
 
     // --- Tabs ---
     llmTab: "llm",

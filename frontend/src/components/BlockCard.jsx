@@ -33,6 +33,9 @@ export default function BlockCard({
                 </label>
                 <span>{t("components.block_card.slide")} {block.slide_index}</span>
                 <span>{t("components.block_card.shape")} {block.shape_id}</span>
+                {block.is_table && block.row_no != null && block.col_no != null && (
+                    <span className="pill">{`R${block.row_no}C${block.col_no}`}</span>
+                )}
                 <span className="pill">{block.block_type}</span>
                 {block.isTranslating ? (
                     <span className="status-pill is-running">{t("components.block_card.translating")}</span>

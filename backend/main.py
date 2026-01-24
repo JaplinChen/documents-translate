@@ -17,6 +17,7 @@ from backend.api import (
     token_stats_router,
     xlsx_router,
     pdf_router,
+    ocr_settings_router,
     style_router,
 )
 
@@ -42,6 +43,7 @@ app.include_router(preserve_terms_router)
 app.include_router(token_stats_router)
 app.include_router(xlsx_router)
 app.include_router(pdf_router)
+app.include_router(ocr_settings_router)
 app.include_router(style_router)
 app.include_router(export_router)
 
@@ -80,4 +82,4 @@ def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=5001, reload=True)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=5002, reload=True)

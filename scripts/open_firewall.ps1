@@ -1,5 +1,5 @@
 $RuleName = "Allow-PPTX-Translate-Docker"
-$Ports = @(5193, 5001, 11434)
+$Ports = @(5194, 5002, 11434)
 
 Write-Host "--- Windows Firewall Configurator ---" -ForegroundColor Cyan
 
@@ -24,4 +24,4 @@ New-NetFirewallRule -DisplayName "PPTX Translate (Docker Share)" `
 
 $ip = ([System.Net.Dns]::GetHostEntry([System.Net.Dns]::GetHostName()).AddressList | Where-Object { $_.AddressFamily -eq 'InterNetwork' } | Select-Object -First 1).IPAddressToString
 Write-Host "SUCCESS: Ports $($Ports -join ', ') are now open." -ForegroundColor Green
-Write-Host "Share URL: http://$($ip):5193" -ForegroundColor Yellow
+Write-Host "Share URL: http://$($ip):5194" -ForegroundColor Yellow

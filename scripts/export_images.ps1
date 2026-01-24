@@ -37,7 +37,7 @@ services:
     image: pptx-translate-backend:latest
     container_name: ppt-translate-backend
     ports:
-      - "5001:5001"
+      - "5002:5002"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -49,7 +49,7 @@ services:
       - ./data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:5001/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:5002/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -58,7 +58,7 @@ services:
     image: pptx-translate-frontend:latest
     container_name: ppt-translate-frontend
     ports:
-      - "5193:80"
+      - "5194:80"
     depends_on:
       backend:
         condition: service_healthy

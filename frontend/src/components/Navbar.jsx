@@ -4,7 +4,7 @@ import { APP_STATUS } from "../constants";
 import TokenStats from "./TokenStats";
 import LanguageSelector from "./LanguageSelector";
 
-export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenManage, onOpenHistory, steps, progress }) {
+export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenManage, steps, progress }) {
     const { t } = useTranslation();
 
     return (
@@ -45,9 +45,6 @@ export function Navbar({ currentStep, status, appStatus, onOpenSettings, onOpenM
                 <TokenStats />
                 <LanguageSelector />
 
-                <button className="nav-icon-btn group" onClick={onOpenHistory} title={t("nav.history")}>
-                    <img src="https://emojicdn.elk.sh/🕒?style=apple" alt="History" className="w-6 h-6 object-contain" />
-                </button>
                 <button className="nav-icon-btn group" onClick={onOpenManage} title={t("nav.manage")}>
                     <img src="https://emojicdn.elk.sh/📚?style=apple" alt="Manage" className="w-6 h-6 object-contain" />
                 </button>

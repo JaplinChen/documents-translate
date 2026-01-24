@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     translate_llm_mode: str = "real"
 
     # Server Configuration
-    port: int = 5001
+    port: int = 5002
     host: str = "0.0.0.0"
 
     # Ollama Configuration

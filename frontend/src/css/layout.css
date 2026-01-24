@@ -160,7 +160,8 @@
     }
 
     .token-stats-toggle {
-        @apply flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-md text-sm font-medium transition-colors cursor-pointer border-none;
+        @apply flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-50 rounded-lg text-sm font-medium transition-colors cursor-pointer;
+        @apply border border-slate-200 shadow-sm;
     }
 
     .token-icon {
@@ -168,7 +169,7 @@
     }
 
     .token-count {
-        @apply text-slate-700;
+        @apply text-slate-700 font-semibold;
     }
 
     .token-cost {
@@ -176,11 +177,11 @@
     }
 
     .token-stats-dropdown {
-        @apply absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden;
+        @apply absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden;
     }
 
     .token-stats-header {
-        @apply flex justify-between items-center px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white;
+        @apply flex justify-between items-center px-4 py-3 bg-violet-500 text-white;
     }
 
     .token-stats-header h4 {

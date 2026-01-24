@@ -116,7 +116,74 @@ export const useSettingsStore = create(
             },
             setAiOption: (key, value) => set(state => ({
                 ai: { ...state.ai, [key]: value }
-            }))
+            })),
+
+            // --- OCR Settings ---
+            ocr: {
+                dpi: 300,
+                lang: "chi_tra+vie+eng",
+                confMin: 15,
+                psm: 6,
+                engine: "paddle",
+                popplerPath: ""
+            },
+            ocrStatus: "",
+            setOcrOption: (key, value) => set(state => ({
+                ocr: { ...state.ocr, [key]: value }
+            })),
+            setOcrStatus: (status) => set({ ocrStatus: status }),
+            loadOcrSettings: async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/ocr/settings`);
+                    if (!response.ok) throw new Error("OCR 設定讀取失敗");
+                    const data = await response.json();
+                    set({
+                        ocr: {
+                            dpi: data.dpi ?? 300,
+                            lang: data.lang ?? "chi_tra+vie+eng",
+                            confMin: data.conf_min ?? 15,
+                            psm: data.psm ?? 6,
+                            engine: data.engine ?? "paddle",
+                            popplerPath: data.poppler_path ?? ""
+                        },
+                        ocrStatus: ""
+                    });
+                } catch (error) {
+                    set({ ocrStatus: error.message || "OCR 設定讀取失敗" });
+                }
+            },
+            saveOcrSettings: async () => {
+                const { ocr } = get();
+                try {
+                    const response = await fetch(`${API_BASE}/api/ocr/settings`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            dpi: Number(ocr.dpi),
+                            lang: ocr.lang,
+                            conf_min: Number(ocr.confMin),
+                            psm: Number(ocr.psm),
+                            engine: ocr.engine,
+                            poppler_path: ocr.popplerPath
+                        })
+                    });
+                    if (!response.ok) throw new Error("OCR 設定儲存失敗");
+                    const data = await response.json();
+                    set({
+                        ocr: {
+                            dpi: data.dpi ?? ocr.dpi,
+                            lang: data.lang ?? ocr.lang,
+                            confMin: data.conf_min ?? ocr.confMin,
+                            psm: data.psm ?? ocr.psm,
+                            engine: data.engine ?? ocr.engine,
+                            popplerPath: data.poppler_path ?? ocr.popplerPath
+                        },
+                        ocrStatus: "已儲存設定"
+                    });
+                } catch (error) {
+                    set({ ocrStatus: error.message || "OCR 設定儲存失敗" });
+                }
+            }
         }),
         {
             name: 'app-settings-storage', // Key in localStorage

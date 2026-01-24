@@ -19,4 +19,4 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 echo "Starting backend in venv..."
 # Run uvicorn
-python -m uvicorn backend.main:app --reload --port 5001 --host 0.0.0.0
+python -m uvicorn backend.main:app --reload --port 5002 --host 0.0.0.0

@@ -147,9 +147,26 @@
         "tabs": {
             "llm": "LLM",
             "ai": "Điều khiển AI",
+            "ocr": "OCR",
             "correction": "Hiệu đính",
             "prompt": "Lời nhắc",
             "fonts": "Phông chữ"
+        },
+        "ocr": {
+            "title": "Cai dat OCR",
+            "desc": "Dieu chinh chat luong quet va dieu kien nhan dang cho PDF OCR.",
+            "dpi": "DPI",
+            "dpi_hint": "Khuyen nghi 200-400, gia tri cao se cham hon",
+            "conf_min": "Nguong do tin cay",
+            "conf_min_hint": "0-100, gia tri cao nghiem ngat hon",
+            "psm": "Che do PSM",
+            "psm_hint": "Goi y 6/7 (dong hoac khoi don)",
+            "engine": "OCR Engine",
+            "engine_hint": "Nen dung PaddleOCR cho PDF scan",
+            "lang": "Ngon ngu",
+            "lang_hint": "Vi du: chi_tra+vie+eng",
+            "poppler_path": "Duong dan Poppler",
+            "poppler_hint": "Che do local can duong dan bin cua poppler"
         },
         "prompt": {
             "empty": "Không có lời nhắc",

@@ -10,6 +10,7 @@ from backend.api.token_stats import router as token_stats_router
 from backend.api.xlsx import router as xlsx_router
 from backend.api.pdf import router as pdf_router
 from backend.api.style import router as style_router
+from backend.api.ocr_settings import router as ocr_settings_router
 
 __all__ = [
     "docx_router",
@@ -24,4 +25,5 @@ __all__ = [
     "xlsx_router",
     "pdf_router",
     "style_router",
+    "ocr_settings_router",
 ]

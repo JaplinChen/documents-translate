@@ -147,9 +147,26 @@
         "tabs": {
             "llm": "LLM",
             "ai": "AI Control",
+            "ocr": "OCR",
             "correction": "Correction",
             "prompt": "Prompt",
             "fonts": "Fonts"
+        },
+        "ocr": {
+            "title": "OCR Settings",
+            "desc": "Adjust scan quality and recognition conditions for PDF OCR.",
+            "dpi": "DPI",
+            "dpi_hint": "Recommended 200-400, higher is slower",
+            "conf_min": "Confidence Threshold",
+            "conf_min_hint": "0-100, higher is stricter",
+            "psm": "PSM Mode",
+            "psm_hint": "Suggested 6/7 (single block or line)",
+            "engine": "OCR Engine",
+            "engine_hint": "Recommend PaddleOCR for scanned PDFs",
+            "lang": "Language",
+            "lang_hint": "Example: chi_tra+vie+eng",
+            "poppler_path": "Poppler Path",
+            "poppler_hint": "Local mode needs poppler bin path"
         },
         "prompt": {
             "empty": "No Prompts",

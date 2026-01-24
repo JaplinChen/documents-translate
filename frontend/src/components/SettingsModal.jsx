@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import LlmTab from "./settings/LlmTab";
 import CorrectionTab from "./settings/CorrectionTab";
 import PromptTab from "./settings/PromptTab";
+import OcrTab from "./settings/OcrTab";
 
 import AiTab from "./settings/AiTab";
 import { FontSettings } from "./settings/FontSettings";
@@ -25,7 +26,8 @@ function SettingsModal({
   fillColor, setFillColor, textColor, setTextColor, lineColor, setLineColor,
   lineDash, setLineDash, llmTone, setLlmTone, useVisionContext, setUseVisionContext,
   useSmartLayout, setUseSmartLayout, onExtractGlossary, busy, status, apiBase,
-  fontMapping, setFontMapping, similarityThreshold, setSimilarityThreshold
+  fontMapping, setFontMapping, similarityThreshold, setSimilarityThreshold,
+  onSaveOcr
 }) {
   const { t } = useTranslation();
   const [showKey, setShowKey] = useState(false);
@@ -56,6 +58,7 @@ function SettingsModal({
                 {tab === "llm" && <h3>{currentProvider.name} {t("settings.title")}</h3>}
                 {tab === "ai" && <h3>{t("settings.tabs.ai")}</h3>}
                 {tab === "fonts" && <h3>{t("settings.tabs.fonts")}</h3>}
+                {tab === "ocr" && <h3>{t("settings.tabs.ocr")}</h3>}
                 {tab === "correction" && <h3>{t("settings.tabs.correction")} {t("settings.title")}</h3>}
                 {tab === "prompt" && <h3>{t("settings.tabs.prompt")} {t("settings.title")}</h3>}
               </div>
@@ -70,7 +73,12 @@ function SettingsModal({
                 ) : (
                   <>
                     <IconButton icon={X} onClick={onClose} size="sm" />
-                    <IconButton icon={Check} variant="action" onClick={tab === "llm" ? onSave : onSaveCorrection} size="sm" />
+                    <IconButton
+                      icon={Check}
+                      variant="action"
+                      onClick={tab === "llm" ? onSave : (tab === "ocr" ? onSaveOcr : onSaveCorrection)}
+                      size="sm"
+                    />
                   </>
                 )}
               </div>
@@ -93,6 +101,7 @@ function SettingsModal({
                   busy={busy} status={status}
                 />
               )}
+              {tab === "ocr" && <OcrTab />}
               {tab === "fonts" && <FontSettings fontMapping={fontMapping} setFontMapping={setFontMapping} />}
               {tab === "correction" && (
                 <CorrectionTab

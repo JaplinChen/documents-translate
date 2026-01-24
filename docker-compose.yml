@@ -39,6 +39,9 @@ services:
       - PDF_OCR_DPI=${PDF_OCR_DPI:-200}
       - PDF_OCR_LANG=${PDF_OCR_LANG:-eng}
       - PDF_OCR_CONF_MIN=${PDF_OCR_CONF_MIN:-10}
+      - PDF_OCR_PSM=${PDF_OCR_PSM:-6}
+      - PDF_OCR_ENGINE=${PDF_OCR_ENGINE:-tesseract}
+      - FLAGS_use_mkldnn=0
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
     volumes:
       - ./data:/app/data

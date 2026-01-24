@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import SettingsModal from "./components/SettingsModal";
 import ManageModal from "./components/ManageModal";
-import HistoryModal from "./components/HistoryModal";
 import { Navbar } from "./components/Navbar";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPanel } from "./components/EditorPanel";
@@ -94,7 +93,6 @@ function App() {
           progress={processor.progress}
           onOpenSettings={() => ui.setLlmOpen(true)}
           onOpenManage={() => ui.setManageOpen(true)}
-          onOpenHistory={() => ui.setHistoryOpen(true)}
         />
       </div>
 
@@ -218,6 +216,7 @@ function App() {
         apiBase={API_BASE}
         fontMapping={settings.fontMapping}
         setFontMapping={settings.setFontMapping}
+        onSaveOcr={settings.saveOcrSettings}
       />
 
       <ManageModal
@@ -242,16 +241,6 @@ function App() {
           fileStore.setBlocks([]);
           ui.setAppStatus(APP_STATUS.IDLE);
           ui.setManageOpen(false); // Close modal on load
-        }}
-      />
-
-      <HistoryModal
-        open={ui.historyOpen}
-        onClose={() => ui.setHistoryOpen(false)}
-        onLoadFile={(file) => {
-          fileStore.setFile(file);
-          fileStore.setBlocks([]);
-          ui.setAppStatus(APP_STATUS.IDLE);
         }}
       />
 

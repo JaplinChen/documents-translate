@@ -149,8 +149,8 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 
 Write-Log "`n===============================================" "Cyan"
 Write-Log "Setup and startup completed!" "Green"
-Write-Log "Frontend URL: http://localhost:5193" "White"
-Write-Log "Backend URL: http://localhost:5001" "White"
+Write-Log "Frontend URL: http://localhost:5194" "White"
+Write-Log "Backend URL: http://localhost:5002" "White"
 Write-Log "===============================================" "Cyan"
 Write-Log "Log saved to: $LogFile" "Gray"
 Pause

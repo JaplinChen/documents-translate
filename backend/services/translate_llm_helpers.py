@@ -155,12 +155,25 @@ async def process_chunk_async(
     if on_progress:
         completed_indices = [idx for idx, _ in chunk]
         completed_ids = [b.get("client_id") for _, b in chunk if b.get("client_id")]
+        completed_blocks = []
+        for idx, block in chunk:
+            client_id = block.get("client_id")
+            translated_text = translated_texts[idx]
+            if translated_text is None:
+                continue
+            completed_blocks.append(
+                {
+                    "client_id": client_id,
+                    "translated_text": translated_text,
+                }
+            )
         try:
             val = on_progress(
                 {
                     "chunk_index": chunk_index,
                     "completed_indices": completed_indices,
                     "completed_ids": completed_ids,
+                    "completed_blocks": completed_blocks,
                     "chunk_size": len(chunk),
                     "total_pending": len(translated_texts),
                     "timestamp": time.time(),

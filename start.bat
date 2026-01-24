@@ -9,8 +9,8 @@ set "PROJECT_ROOT=%~dp0"
 set "BACKEND_DIR=%PROJECT_ROOT%backend"
 set "FRONTEND_DIR=%PROJECT_ROOT%frontend"
 set "VENV_DIR=%PROJECT_ROOT%.venv"
-set "BACKEND_PORT=5001"
-set "FRONTEND_PORT=5193"
+set "BACKEND_PORT=5002"
+set "FRONTEND_PORT=5194"
 set "OLLAMA_URL=http://127.0.0.1:11434"
 
 :: ========================================
@@ -43,12 +43,13 @@ echo   5. Restart all
 echo   6. Check status
 echo   7. Open browser
 echo   8. Check Ollama
+echo   9. Start Docker (build + up)
 echo.
 echo   0. Exit
 echo.
 echo ========================================
 
-set /p "choice=Select [0-8]: "
+set /p "choice=Select [0-9]: "
 
 if "%choice%"=="1" goto START_ALL
 if "%choice%"=="2" goto START_BACKEND
@@ -58,6 +59,7 @@ if "%choice%"=="5" goto RESTART_ALL
 if "%choice%"=="6" goto STATUS
 if "%choice%"=="7" goto OPEN_BROWSER
 if "%choice%"=="8" goto CHECK_OLLAMA
+if "%choice%"=="9" goto START_DOCKER
 if "%choice%"=="0" goto EXIT
 
 echo Invalid choice
@@ -73,7 +75,7 @@ call :DO_START_BACKEND
 call :DO_START_FRONTEND
 echo.
 echo Waiting for services...
-timeout /t 5 /nobreak >nul
+timeout /t 8 /nobreak >nul
 call :SHOW_STATUS
 start http://localhost:%FRONTEND_PORT%
 echo Browser opened...
@@ -134,6 +136,11 @@ goto MAIN_MENU
 start http://localhost:%FRONTEND_PORT%
 goto MAIN_MENU
 
+:START_DOCKER
+echo.
+call "%PROJECT_ROOT%start_docker.bat"
+goto MAIN_MENU
+
 :CHECK_OLLAMA
 cls
 echo.
@@ -167,19 +174,25 @@ exit /b 0
 :: Helper Functions
 :: ========================================
 :DO_START_BACKEND
+call :ENSURE_VENV
+if errorlevel 1 goto :eof
 echo [Backend] Starting...
-start "Backend" cmd /c "cd /d "%PROJECT_ROOT%" && "%VENV_DIR%\Scripts\python" -m uvicorn backend.main:app --reload --port %BACKEND_PORT% --host 0.0.0.0"
+start "Backend" /D "%PROJECT_ROOT%" cmd /k ""%VENV_DIR%\Scripts\python" -m uvicorn backend.main:app --reload --port %BACKEND_PORT% --host 0.0.0.0"
 goto :eof
 
 :DO_START_FRONTEND
+call :ENSURE_NODE
+if errorlevel 1 goto :eof
+call :ENSURE_FRONTEND_DEPS
+if errorlevel 1 goto :eof
 echo [Frontend] Starting...
-start "Frontend" cmd /c "cd /d "%FRONTEND_DIR%" && npm run dev"
+start "Frontend" /D "%FRONTEND_DIR%" cmd /k "npm run dev"
 goto :eof
 
 :CHECK_PORT
 set "_port=%~1"
 set "_name=%~2"
-netstat -an | find ":%_port%" >nul 2>&1
+powershell -NoProfile -Command "if (Test-NetConnection -ComputerName 127.0.0.1 -Port %_port% -InformationLevel Quiet) { exit 0 } else { exit 1 }" >nul 2>&1
 if !errorlevel! equ 0 (
     echo [OK] %_name%: Running (port %_port%)
 ) else (
@@ -188,6 +201,64 @@ if !errorlevel! equ 0 (
 goto :eof
 
 :SHOW_STATUS
-call :CHECK_PORT %BACKEND_PORT% "Backend"
-call :CHECK_PORT %FRONTEND_PORT% "Frontend"
+call :CHECK_PORTS
 goto :eof
+
+:CHECK_PORTS
+powershell -NoProfile -Command ^
+"$retries = 6; $delay = 1; ^
+ for ($i = 0; $i -lt $retries; $i++) { ^
+   $b = Test-NetConnection -ComputerName 127.0.0.1 -Port %BACKEND_PORT% -InformationLevel Quiet -WarningAction SilentlyContinue; ^
+   $f = Test-NetConnection -ComputerName 127.0.0.1 -Port %FRONTEND_PORT% -InformationLevel Quiet -WarningAction SilentlyContinue; ^
+   if ($b -or $f) { break }; ^
+   Start-Sleep -Seconds $delay; ^
+ } ^
+ if ($b) { Write-Host \"[OK] Backend: Running (port %BACKEND_PORT%)\" } else { Write-Host \"[X] Backend: Not running\" }; ^
+ if ($f) { Write-Host \"[OK] Frontend: Running (port %FRONTEND_PORT%)\" } else { Write-Host \"[X] Frontend: Not running\" }"
+goto :eof
+
+:ENSURE_NODE
+where node >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Node.js not found. Please install Node.js.
+    echo [ERROR] Download: https://nodejs.org/
+    exit /b 1
+)
+where npm >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] npm not found. Please reinstall Node.js.
+    exit /b 1
+)
+exit /b 0
+
+:ENSURE_VENV
+if not exist "%VENV_DIR%\Scripts\python.exe" (
+    echo [ERROR] venv python not found. Run install.bat to recreate venv.
+    exit /b 1
+)
+exit /b 0
+
+:ENSURE_FRONTEND_DEPS
+if not exist "%FRONTEND_DIR%\\node_modules" (
+    echo [INFO] Frontend dependencies missing. Installing...
+    pushd "%FRONTEND_DIR%"
+    call npm install
+    if errorlevel 1 (
+        echo [ERROR] Failed to install frontend dependencies.
+        popd
+        exit /b 1
+    )
+    popd
+)
+if not exist "%FRONTEND_DIR%\\node_modules\\.bin\\vite.cmd" (
+    echo [INFO] Frontend dependencies missing. Installing...
+    pushd "%FRONTEND_DIR%"
+    call npm install
+    if errorlevel 1 (
+        echo [ERROR] Failed to install frontend dependencies.
+        popd
+        exit /b 1
+    )
+    popd
+)
+exit /b 0

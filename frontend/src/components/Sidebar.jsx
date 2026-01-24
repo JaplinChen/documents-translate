@@ -19,6 +19,7 @@ export function Sidebar({
     const hasTranslation = blocks && blocks.some(b => b.translated_text);
     const isTranslating = appStatus === APP_STATUS.TRANSLATING;
     const isFinished = appStatus === APP_STATUS.EXPORT_COMPLETED;
+    const fileExt = file?.name?.split(".")?.pop()?.toUpperCase();
 
     const [openSections, setOpenSections] = useState({ step1: true, step2: false, step3: false, step4: false });
 
@@ -52,8 +53,18 @@ export function Sidebar({
                                 <span className="icon">{isFileSelected ? "📄" : "📁"}</span>
                                 <div className="flex flex-col items-center">
                                     <span className="text-main">{isFileSelected ? file.name : t("sidebar.upload.placeholder")}</span>
-                                    {!isFileSelected && <span className="text-sub">{t("sidebar.upload.limit")}</span>}
+                                    {!isFileSelected && (
+                                        <>
+                                            <span className="text-sub">{t("sidebar.upload.limit")}</span>
+                                            <div className="file-type-chips">
+                                                {["PPTX", "DOCX", "XLSX", "PDF"].map(type => (
+                                                    <span key={type} className="file-type-chip">{type}</span>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
                                     {isFileSelected && <span className="text-sub text-blue-600">{t("sidebar.upload.ready")}</span>}
+                                    {isFileSelected && fileExt && <span className="file-type-chip is-selected">{fileExt}</span>}
                                 </div>
                                 <input className="file-input-hidden" type="file" accept=".pptx,.docx,.xlsx,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
                             </label>

@@ -221,6 +221,24 @@ export function useDocumentProcessor() {
                                     if (id && !completedIds.includes(id)) completedIds.push(id);
                                 });
                             }
+                            if (eventData.completed_blocks?.length) {
+                                setBlocks(prev => prev.map(b => {
+                                    const match = eventData.completed_blocks.find(
+                                        item => item.client_id && item.client_id === b.client_id
+                                    );
+                                    if (!match) return b;
+                                    const translatedText = match.translated_text ?? b.translated_text;
+                                    return {
+                                        ...b,
+                                        translated_text: translatedText,
+                                        output_mode: translatedText ? "translated" : b.output_mode,
+                                        isTranslating: false,
+                                        updatedAt: translatedText
+                                            ? new Date().toLocaleTimeString("zh-TW", { hour12: false })
+                                            : b.updatedAt
+                                    };
+                                }));
+                            }
                             const pct = Math.round((completedIds.length / blocks.length) * 100);
                             setProgress(pct);
                             setStatus(t("sidebar.translate.translating", { current: completedIds.length, total: blocks.length }));

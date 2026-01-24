@@ -1,5 +1,5 @@
 # Backend Dockerfile - Minimal Production Build
-FROM python:3.13-slim AS base
+FROM python:3.11-slim AS base
 
 WORKDIR /app
 
@@ -7,6 +7,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
+    libgl1 \
+    libglib2.0-0 \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     poppler-utils \
@@ -30,9 +32,10 @@ COPY docs/ ./docs/
 # Create data directory
 RUN mkdir -p /app/data
 
-EXPOSE 5001
+EXPOSE 5002
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5001/health || exit 1
+    CMD curl -f http://localhost:5002/health || exit 1
 
-CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5001"]
+CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5002"]
+
