@@ -66,3 +66,4 @@ data/
 .agent/
 .antigravity/
 .pytest_cache/
+.worktrees/
