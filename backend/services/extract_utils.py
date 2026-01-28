@@ -10,7 +10,11 @@ from langdetect import DetectorFactory, detect
 DetectorFactory.seed = 0
 
 
-def _load_preserve_terms() -> list[dict]:
+_PRESERVE_TERMS_CACHE: list[dict] = []
+_PRESERVE_TERMS_MTIME: float | None = None
+
+
+def _load_preserve_terms() -> tuple[list[dict], float | None]:
     """Load preserve terms from JSON file."""
     # Try multiple possible locations for preserve_terms.json
     base_path = Path(__file__).parent.parent
@@ -19,17 +23,35 @@ def _load_preserve_terms() -> list[dict]:
         base_path / "services" / "data" / "preserve_terms.json",
     ]
 
+    latest_mtime: float | None = None
+    latest_terms: list[dict] = []
+
     for preserve_file in possible_paths:
-        if preserve_file.exists():
-            try:
+        if not preserve_file.exists():
+            continue
+        try:
+            stat = preserve_file.stat()
+            if latest_mtime is None or stat.st_mtime > latest_mtime:
                 with open(preserve_file, encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                continue
-    return []
+                    latest_terms = json.load(f)
+                latest_mtime = stat.st_mtime
+        except Exception:
+            continue
+    return latest_terms, latest_mtime
 
 
-PRESERVE_TERMS = _load_preserve_terms()
+def _get_preserve_terms() -> list[dict]:
+    """Return preserve terms with simple mtime-based cache invalidation."""
+    global _PRESERVE_TERMS_CACHE, _PRESERVE_TERMS_MTIME
+    terms, mtime = _load_preserve_terms()
+    if mtime is None:
+        _PRESERVE_TERMS_CACHE = []
+        _PRESERVE_TERMS_MTIME = None
+        return _PRESERVE_TERMS_CACHE
+    if _PRESERVE_TERMS_MTIME != mtime:
+        _PRESERVE_TERMS_CACHE = terms
+        _PRESERVE_TERMS_MTIME = mtime
+    return _PRESERVE_TERMS_CACHE
 
 
 def is_numeric_only(text: str) -> bool:
@@ -53,7 +75,7 @@ def is_technical_terms_only(text: str) -> bool:  # noqa: C901
 
     # Priority 1: Check preserve terms database
     text_clean = text.strip()
-    for term_entry in PRESERVE_TERMS:
+    for term_entry in _get_preserve_terms():
         term = term_entry.get("term", "")
         case_sensitive = term_entry.get("case_sensitive", True)
 

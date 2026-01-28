@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { API_BASE } from '../constants';
+import i18n from "../i18n";
 import { DEFAULT_FONT_MAPPING } from '../components/settings/FontSettings';
 
 const DEFAULT_PROVIDERS = {
@@ -41,11 +42,11 @@ export const useSettingsStore = create(
 
                 // Validation
                 if (llmProvider !== 'ollama' && !settings.apiKey) {
-                    set({ llmStatus: "請先輸入 API Key" });
+                    set({ llmStatus: i18n.t("settings.status.api_key_missing") });
                     return;
                 }
 
-                set({ llmStatus: "模型偵測中..." });
+                set({ llmStatus: i18n.t("settings.status.models_detecting") });
 
                 try {
                     const formData = new FormData();
@@ -66,7 +67,7 @@ export const useSettingsStore = create(
                         body: formData
                     });
 
-                    if (!response.ok) throw new Error(await response.text() || "未知錯誤");
+                    if (!response.ok) throw new Error(await response.text() || i18n.t("common.unknown_error"));
 
                     const data = await response.json();
                     const models = data.models || [];
@@ -80,9 +81,9 @@ export const useSettingsStore = create(
                         get().updateProviderSettings(llmProvider, { model: validModel });
                     }
 
-                    set({ llmStatus: models.length ? `已偵測 ${models.length} 個模型` : "未偵測到模型" });
+                    set({ llmStatus: models.length ? i18n.t("settings.status.models_detected", { count: models.length }) : i18n.t("settings.status.models_not_found") });
                 } catch (error) {
-                    set({ llmStatus: "模型偵測失敗" });
+                    set({ llmStatus: i18n.t("settings.status.models_detect_failed") });
                     console.error("Detect Models Error:", error);
                 }
             },
@@ -135,7 +136,7 @@ export const useSettingsStore = create(
             loadOcrSettings: async () => {
                 try {
                     const response = await fetch(`${API_BASE}/api/ocr/settings`);
-                    if (!response.ok) throw new Error("OCR 設定讀取失敗");
+                    if (!response.ok) throw new Error(i18n.t("settings.status.ocr_load_failed"));
                     const data = await response.json();
                     set({
                         ocr: {
@@ -149,7 +150,7 @@ export const useSettingsStore = create(
                         ocrStatus: ""
                     });
                 } catch (error) {
-                    set({ ocrStatus: error.message || "OCR 設定讀取失敗" });
+                    set({ ocrStatus: error.message || i18n.t("settings.status.ocr_load_failed") });
                 }
             },
             saveOcrSettings: async () => {
@@ -167,7 +168,7 @@ export const useSettingsStore = create(
                             poppler_path: ocr.popplerPath
                         })
                     });
-                    if (!response.ok) throw new Error("OCR 設定儲存失敗");
+                    if (!response.ok) throw new Error(i18n.t("settings.status.ocr_save_failed"));
                     const data = await response.json();
                     set({
                         ocr: {
@@ -178,10 +179,10 @@ export const useSettingsStore = create(
                             engine: data.engine ?? ocr.engine,
                             popplerPath: data.poppler_path ?? ocr.popplerPath
                         },
-                        ocrStatus: "已儲存設定"
+                        ocrStatus: i18n.t("settings.status.saved")
                     });
                 } catch (error) {
-                    set({ ocrStatus: error.message || "OCR 設定儲存失敗" });
+                    set({ ocrStatus: error.message || i18n.t("settings.status.ocr_save_failed") });
                 }
             }
         }),

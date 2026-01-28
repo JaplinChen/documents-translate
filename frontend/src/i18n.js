@@ -8,7 +8,9 @@ import vi from './locales/vi.json';
 
 const resources = {
     'zh-TW': { translation: zhTW },
+    'zh': { translation: zhTW },
     'en-US': { translation: enUS },
+    'en': { translation: enUS },
     'vi': { translation: vi },
 };
 

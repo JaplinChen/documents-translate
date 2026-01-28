@@ -52,11 +52,11 @@ export function EditorPanel({
                     <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center gap-2">
                             <Layout size={20} className="text-slate-400" />
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">視覺預覽</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("editor.empty.preview")}</span>
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center gap-2">
                             <Layers size={20} className="text-slate-400" />
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">批次編輯</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("editor.empty.batch")}</span>
                         </div>
                     </div>
                 </div>

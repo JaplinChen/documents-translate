@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from backend.services.export_formats import (
     export_to_docx,
+    export_to_md,
     export_to_pdf,
     export_to_txt,
     export_to_xlsx,
@@ -88,6 +89,22 @@ async def export_txt(request: ExportRequest):
             media_type="text/plain; charset=utf-8",
             headers={
                 "Content-Disposition": "attachment; filename=translation.txt"
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"匯出失敗: {str(e)}") from e
+
+
+@router.post("/export/md")
+async def export_md(request: ExportRequest):
+    """Export translation blocks to Markdown file."""
+    try:
+        output = export_to_md(request.blocks)
+        return StreamingResponse(
+            output,
+            media_type="text/markdown; charset=utf-8",
+            headers={
+                "Content-Disposition": "attachment; filename=translation.md"
             },
         )
     except Exception as e:

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "../constants";
 
 /**
@@ -6,15 +7,16 @@ import { API_BASE } from "../constants";
  * Provides multiple export format options with download functionality
  */
 export function ExportMenu({ blocks, onClose, disabled = false }) {
+    const { t } = useTranslation();
     const [exporting, setExporting] = useState(null);
     const [error, setError] = useState(null);
 
     const formats = [
-        { id: "pptx", label: "PowerPoint (.pptx)", icon: "📊", primary: true },
-        { id: "docx", label: "Word (.docx)", icon: "📝" },
-        { id: "xlsx", label: "Excel (.xlsx)", icon: "📈" },
-        { id: "pdf", label: "PDF (.pdf)", icon: "🖨️" },
-        { id: "txt", label: "純文字 (.txt)", icon: "📄" },
+        { id: "pptx", label: t("export.formats.pptx"), icon: "📊", primary: true },
+        { id: "docx", label: t("export.formats.docx"), icon: "📝" },
+        { id: "xlsx", label: t("export.formats.xlsx"), icon: "📈" },
+        { id: "txt", label: t("export.formats.txt"), icon: "📄" },
+        { id: "md", label: t("export.formats.md"), icon: "🧾" },
     ];
 
     const handleExport = async (formatId) => {
@@ -30,7 +32,7 @@ export function ExportMenu({ blocks, onClose, disabled = false }) {
             });
 
             if (!response.ok) {
-                throw new Error(`匯出失敗 (${response.status})`);
+                throw new Error(t("export.error", { status: response.status }));
             }
 
             const blob = await response.blob();
@@ -68,7 +70,7 @@ export function ExportMenu({ blocks, onClose, disabled = false }) {
                 color: "#374151",
                 marginBottom: "4px"
             }}>
-                選擇匯出格式
+                {t("export.title")}
             </div>
 
             {formats.map((format) => (

@@ -2,17 +2,18 @@ import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 const LANGUAGES = [
-    { code: "zh-TW", label: "繁體中文", flag: "tw" },
-    { code: "en-US", label: "English", flag: "us" },
-    { code: "vi", label: "Tiếng Việt", flag: "vn" }
+    { code: "zh-TW", labelKey: "language.ui.zh_tw", label: "繁體中文", flag: "tw" },
+    { code: "en-US", labelKey: "language.ui.en_us", label: "English", flag: "us" },
+    { code: "vi", labelKey: "language.ui.vi", label: "Tiếng Việt", flag: "vn" }
 ];
 
 export default function LanguageSelector() {
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
     const currentLang = LANGUAGES.find(l => i18n.language === l.code || i18n.language?.startsWith(l.code)) || LANGUAGES[0];
+    const getLangLabel = (lang) => t(lang.labelKey, lang.label);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -34,12 +35,12 @@ export default function LanguageSelector() {
             <button
                 className="lang-btn group"
                 onClick={() => setIsOpen(!isOpen)}
-                title={currentLang.label} // Tooltip showing language name
+                title={getLangLabel(currentLang)}
                 type="button"
             >
                 <img
                     src={`https://flagcdn.com/w40/${currentLang.flag}.png`}
-                    alt={currentLang.label}
+                    alt={getLangLabel(currentLang)}
                 />
             </button>
 
@@ -54,10 +55,10 @@ export default function LanguageSelector() {
                         >
                             <img
                                 src={`https://flagcdn.com/w40/${lang.flag}.png`}
-                                alt={lang.label}
+                                alt={getLangLabel(lang)}
                                 className="w-6 h-4 object-cover rounded-sm border border-slate-100 shadow-sm"
                             />
-                            <span className="text-sm font-medium">{lang.label}</span>
+                            <span className="text-sm font-medium">{getLangLabel(lang)}</span>
                         </button>
                     ))}
                 </div>

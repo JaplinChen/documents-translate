@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import BlockCard from "./BlockCard";
 
 /**
@@ -25,44 +26,45 @@ export default function BlockList({
     onAddGlossary,
     onAddMemory
 }) {
+    const { t } = useTranslation();
     return (
         <>
             <div className="filter-row">
                 <div className="filter-item">
-                    <label className="field-label" htmlFor="filter-text">搜尋</label>
+                    <label className="field-label" htmlFor="filter-text">{t("editor.filter.search")}</label>
                     <input
                         id="filter-text"
                         className="select-input"
                         type="text"
                         value={filterText}
-                        placeholder="搜尋原文/翻譯"
+                        placeholder={t("editor.search_placeholder")}
                         onChange={(e) => onFilterTextChange(e.target.value)}
                     />
                 </div>
                 <div className="filter-item">
-                    <label className="field-label" htmlFor="filter-type">類型</label>
+                    <label className="field-label" htmlFor="filter-type">{t("editor.filter.type")}</label>
                     <select id="filter-type" className="select-input" value={filterType} onChange={(e) => onFilterTypeChange(e.target.value)}>
-                        <option value="all">全部</option>
-                        <option value="textbox">textbox</option>
-                        <option value="table_cell">table_cell</option>
-                        <option value="notes">notes</option>
+                        <option value="all">{t("editor.filter_type")}</option>
+                        <option value="textbox">{t("components.editor.filter_textbox")}</option>
+                        <option value="table_cell">{t("components.editor.filter_table")}</option>
+                        <option value="notes">{t("components.editor.filter_notes")}</option>
                     </select>
                 </div>
                 <div className="filter-item">
-                    <label className="field-label" htmlFor="filter-slide">Slide</label>
+                    <label className="field-label" htmlFor="filter-slide">{t("editor.filter.slide")}</label>
                     <input id="filter-slide" className="select-input" type="number" value={filterSlide} placeholder="0" onChange={(e) => onFilterSlideChange(e.target.value)} />
                 </div>
                 <div className="filter-actions">
-                    <button className="btn ghost" type="button" onClick={onSelectAll}>全選</button>
-                    <button className="btn ghost" type="button" onClick={onClearSelection}>清除</button>
+                    <button className="btn ghost" type="button" onClick={onSelectAll}>{t("editor.select_all")}</button>
+                    <button className="btn ghost" type="button" onClick={onClearSelection}>{t("editor.clear_selection")}</button>
                 </div>
             </div>
 
             <div className="block-list">
                 {filteredBlocks.length === 0 ? (
                     <div className="empty-state">
-                        <p>尚未抽取任何文字區塊</p>
-                        <span>請先上傳文件並按下「提取術語」</span>
+                        <p>{t("editor.empty.title")}</p>
+                        <span>{t("editor.empty.hint")}</span>
                     </div>
                 ) : (
                     filteredBlocks.map((block, filteredIndex) => {

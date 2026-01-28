@@ -10,7 +10,9 @@ from backend.services.translation_memory import (
     delete_glossary,
     delete_tm,
     get_glossary,
+    get_glossary_count,
     get_tm,
+    get_tm_count,
     seed_glossary,
     seed_tm,
     upsert_glossary,
@@ -89,7 +91,11 @@ async def tm_seed() -> dict:
 
 @router.get("/glossary")
 async def tm_glossary(limit: int = 200) -> dict:
-    return {"items": get_glossary(limit=limit)}
+    return {
+        "items": get_glossary(limit=limit),
+        "total": get_glossary_count(),
+        "limit": limit,
+    }
 
 
 @router.post("/glossary")
@@ -137,7 +143,11 @@ async def tm_glossary_batch_delete(payload: BatchDelete) -> dict:
 
 @router.get("/memory")
 async def tm_memory(limit: int = 200) -> dict:
-    return {"items": get_tm(limit=limit)}
+    return {
+        "items": get_tm(limit=limit),
+        "total": get_tm_count(),
+        "limit": limit,
+    }
 
 
 @router.post("/memory")

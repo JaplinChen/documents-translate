@@ -41,15 +41,15 @@ export default function BlockCard({
                     <span className="pill">{`R${block.row_no}C${block.col_no}`}</span>
                 )}
                 <span className="pill">{block.block_type}</span>
-                {isBilingual && <span className="pill bg-indigo-100 text-indigo-700 border border-indigo-200">Bilingual</span>}
-                {isCorrection && <span className="pill bg-violet-100 text-violet-700 border border-violet-200">Correction</span>}
+                {isBilingual && <span className="pill bg-indigo-100 text-indigo-700 border border-indigo-200">{t("components.block_card.bilingual")}</span>}
+                {isCorrection && <span className="pill bg-violet-100 text-violet-700 border border-violet-200">{t("components.block_card.correction")}</span>}
                 {block.isTranslating ? (
                     <span className="status-pill is-running">{t("components.block_card.translating")}</span>
                 ) : block.updatedAt ? (
                     <span className="status-pill">{t("components.block_card.updated_at", { time: block.updatedAt })}</span>
                 ) : null}
                 {mode === "correction" && block.correction_temp ? (
-                    <span className="status-pill bg-emerald-50 text-emerald-600">暫存</span>
+                    <span className="status-pill bg-emerald-50 text-emerald-600">{t("components.block_card.draft")}</span>
                 ) : null}
 
                 <div className="block-meta-tools ml-auto flex gap-1">

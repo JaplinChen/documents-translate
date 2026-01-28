@@ -55,7 +55,7 @@
             "completed": "Đã xuất tập tin"
         },
         "export": {
-            "others": "Định dạng khác"
+            "others": "Tải bảng đối chiếu dịch"
         },
         "hint": {
             "step12": "Vui lòng hoàn thành bước 1-2 trước",
@@ -67,7 +67,9 @@
         "summary": "Tổng {{total}}, Hiển thị {{filtered}}",
         "empty": {
             "title": "Chưa trích xuất khối văn bản nào",
-            "hint": "Vui lòng tải lên tài liệu và nhấp vào 'Phân tích' trước"
+            "hint": "Vui lòng tải lên tài liệu và nhấp vào 'Phân tích' trước",
+            "preview": "Xem trước",
+            "batch": "Chỉnh sửa hàng loạt"
         },
         "filter": {
             "search": "Tìm kiếm",
@@ -134,7 +136,20 @@
             "output": "Xuất",
             "placeholder": "Nhập nội dung dịch hoặc hiệu đính",
             "tools_glossary_title": "Thêm vào Thuật ngữ",
-            "tools_memory_title": "Thêm vào Bộ nhớ dịch"
+            "tools_memory_title": "Thêm vào Bộ nhớ dịch",
+            "bilingual": "Song ngữ",
+            "correction": "Hiệu đính",
+            "draft": "Bản nháp"
+        },
+        "shortcuts": {
+            "actions": {
+                "save_progress": "Lưu tiến trình dịch",
+                "start_translate": "Bắt đầu dịch AI",
+                "toggle_select": "Chọn/Bỏ chọn tất cả khối",
+                "close_modal": "Đóng cửa sổ"
+            },
+            "title": "⌨️ Hướng dẫn phím tắt",
+            "confirm": "Đã hiểu"
         }
     },
     "settings": {
@@ -198,7 +213,14 @@
         "status": {
             "saving": "Đang lưu...",
             "saved": "Đã lưu",
-            "failed": "Lưu thất bại"
+            "failed": "Lưu thất bại",
+            "api_key_missing": "Vui lòng nhập API Key",
+            "models_detecting": "Đang phát hiện mô hình...",
+            "models_detected": "Đã phát hiện {{count}} mô hình",
+            "models_not_found": "Không phát hiện mô hình",
+            "models_detect_failed": "Phát hiện mô hình thất bại",
+            "ocr_load_failed": "Tải cài đặt OCR thất bại",
+            "ocr_save_failed": "Lưu cài đặt OCR thất bại"
         },
         "ai": {
             "tone_title": "Phong cách & Giọng điệu (Tone)",
@@ -228,7 +250,24 @@
             "dash": "Gạch đứt",
             "dot": "Chấm",
             "dashdot": "Gạch chấm",
-            "solid": "Nét liền"
+            "solid": "Nét liền",
+            "hint": "Gợi ý: Kiểu hiển thị sẽ áp dụng cho đánh dấu hiệu đính trong Powerpoint. Điều chỉnh ngưỡng để kiểm soát mức hiệu đính.",
+            "sensitivity_steps": {
+                "s1": "Rất thoáng",
+                "s2": "Thoáng",
+                "s3": "Cân bằng",
+                "s4": "Nghiêm",
+                "s5": "Rất nghiêm"
+            },
+            "sensitivity_desc": {
+                "s1": "Có thể viết lại nhiều",
+                "s2": "Cho phép viết lại",
+                "s3": "Điều chỉnh vừa phải",
+                "s4": "Điều chỉnh ít",
+                "s5": "Chỉ sửa lỗi chính tả"
+            },
+            "sensitivity_label": "Ngưỡng tương đồng (Sensitivity)",
+            "line_style_title": "Kiểu đường viền"
         },
         "llm": {
             "api_key": "API Key",
@@ -270,7 +309,8 @@
             "save": "Lưu",
             "cancel": "Hủy",
             "convert_preserve": "Chuyển thành bảo lưu",
-            "convert_glossary": "Chuyển thành thuật ngữ"
+            "convert_glossary": "Chuyển thành thuật ngữ",
+            "load_more": "Tải thêm"
         },
         "fields": {
             "source_text": "Văn bản gốc",
@@ -286,9 +326,12 @@
             "actions": "Thao tác"
         },
         "confirm": {
-            "delete": "Bạn có chắc chắn muốn xóa mục này không?"
+            "delete": "Bạn có chắc chắn muốn xóa mục này không?",
+            "clear_memory": "Xóa toàn bộ bộ nhớ dịch? Hành động này không thể hoàn tác.",
+            "clear_glossary": "Xóa toàn bộ thuật ngữ? Hành động này không thể hoàn tác."
         },
         "empty": "Không có dữ liệu",
+        "list_summary": "Hiển thị {{shown}} / {{total}}",
         "preserve": {
             "search_placeholder": "Tìm kiếm thuật ngữ...",
             "category_all": "Tất cả danh mục",
@@ -323,8 +366,34 @@
                 "update_fail": "Cập nhật thất bại",
                 "export_fail": "Xuất thất bại",
                 "import_success": "Nhập thành công: {{imported}} trường hợp, Bỏ qua: {{skipped}} trường hợp",
-                "import_fail": "Nhập thất bại"
+                "import_fail": "Nhập thất bại",
+                "convert_confirm": "Chuyển thuật ngữ này sang bảng đối chiếu? (Bản ghi gốc sẽ bị xóa)",
+                "batch_convert_confirm": "Chuyển các thuật ngữ đã chọn sang bảng đối chiếu? (Bản ghi gốc sẽ bị xóa)"
             }
+        },
+        "batch": {
+            "confirm_delete": "Xóa {{count}} mục đã chọn?",
+            "confirm_convert": "Chuyển đổi {{count}} mục đã chọn {{action}}? (Bản ghi gốc sẽ bị xóa)",
+            "convert_success": "Đã chuyển đổi {{count}} mục",
+            "convert_failed": ", thất bại {{count}} mục",
+            "selected_count": "Đã chọn {{count}}",
+            "to_preserve": "thành thuật ngữ",
+            "to_glossary": "thành bảng đối chiếu",
+            "delete": "Xóa hàng loạt"
+        },
+        "alerts": {
+            "save_glossary_failed": "Lưu thuật ngữ thất bại: {{message}}",
+            "save_memory_failed": "Lưu bộ nhớ thất bại: {{message}}",
+            "convert_failed": "Chuyển đổi thất bại",
+            "convert_failed_detail": "Chuyển đổi thất bại: {{message}}",
+            "convert_success": "Đã thêm \"{{text}}\" vào thuật ngữ bảo lưu"
+        },
+        "glossary_extract": {
+            "processing": "Đang trích xuất thuật ngữ...",
+            "failed": "Trích xuất thất bại",
+            "failed_detail": "Trích xuất thất bại: {{message}}",
+            "empty": "Không phát hiện thuật ngữ rõ ràng",
+            "success": "Trích xuất thành công, thêm {{count}} thuật ngữ"
         }
     },
     "common": {
@@ -335,7 +404,11 @@
         "delete": "Xóa",
         "note": "Lưu ý",
         "cancel": "Hủy",
-        "confirm": "Xác nhận"
+        "confirm": "Xác nhận",
+        "select_placeholder": "Chọn",
+        "unknown_error": "Lỗi không xác định",
+        "loading": "Đang tải...",
+        "download": "Tải xuống"
     },
     "status": {
         "extracting": "Đang trích xuất...",
@@ -349,6 +422,63 @@
         "translate_failed": "Dịch thuật lỗi",
         "apply_failed": "Xuất lỗi",
         "server_error": "Lỗi kết nối máy chủ",
-        "server_timeout": "Hết thời gian chờ"
+        "server_timeout": "Hết thời gian chờ",
+        "backend_generate_failed": "Tạo dữ liệu từ backend thất bại"
+    },
+    "language": {
+        "options": {
+            "auto": "Tự động (Auto)",
+            "vi": "Tiếng Việt",
+            "zh_tw": "繁體中文",
+            "zh_cn": "简体中文",
+            "en": "English",
+            "ja": "日本語",
+            "ko": "한국어"
+        },
+        "ui": {
+            "zh_tw": "繁體中文",
+            "en_us": "English",
+            "vi": "Tiếng Việt"
+        }
+    },
+    "export": {
+        "title": "Chọn định dạng xuất",
+        "error": "Xuất thất bại ({{status}})",
+        "formats": {
+            "pptx": "PowerPoint (.pptx)",
+            "docx": "Word (.docx)",
+            "xlsx": "Excel (.xlsx)",
+            "txt": "Văn bản thuần (.txt)",
+            "md": "Markdown (.md)"
+        }
+    },
+    "term_suggestions": {
+        "title": "🔍 Gợi ý thuật ngữ thông minh",
+        "count": "{{count}} thuật ngữ gợi ý",
+        "loading": "Đang phân tích văn bản...",
+        "empty": "Không có thuật ngữ gợi ý",
+        "add": "+ Thêm vào thuật ngữ",
+        "added": "✓ Đã thêm",
+        "fetch_failed": "Không thể lấy gợi ý thuật ngữ"
+    },
+    "utils": {
+        "model_detect_hint": {
+            "ollama": "Vui lòng kiểm tra:\n1. Dịch vụ Ollama đang chạy\n2. Base URL đúng\n3. Đã tải mô hình",
+            "generic": "Vui lòng kiểm tra:\n1. API Key đúng\n2. Tên mô hình tồn tại\n3. Mạng hoạt động bình thường"
+        }
+    },
+    "history": {
+        "load_json_blocked": "Tệp lịch sử JSON không thể tải vào trình chỉnh sửa. Vui lòng tải xuống.",
+        "confirm_delete": "Xóa tệp này?",
+        "confirm_reset_all": "Cảnh báo: thao tác này sẽ xóa vĩnh viễn TM, bộ đệm thuật ngữ và lịch sử xuất. Tiếp tục?",
+        "reset_success": "Dọn dẹp xong, đã xóa {{count}} tệp",
+        "reset_warning": "Gợi ý: để dịch lại hoàn toàn hoặc xóa kho, hãy bấm nút bên phải.",
+        "reset_all": "Xóa toàn bộ bộ đệm và tệp",
+        "empty": "Không có lịch sử",
+        "filename": "Tên tệp",
+        "date": "Ngày",
+        "size": "Kích thước",
+        "actions": "Thao tác",
+        "load": "Tải vào trình chỉnh sửa"
     }
 }

@@ -16,7 +16,7 @@ export function useDocumentProcessor() {
     const { apiKey: llmApiKey, baseUrl: llmBaseUrl, model: llmModel, fastMode: llmFastMode } = currentProvider;
     const {
         sourceLang, secondaryLang, targetLang, mode, bilingualLayout,
-        setStatus, setAppStatus, setBusy, setSlideDimensions
+        setStatus, setAppStatus, setBusy, setSlideDimensions, setLastTranslationAt
     } = useUIStore();
 
     const useTm = useSettingsStore(s => s.useTm);
@@ -65,6 +65,7 @@ export function useDocumentProcessor() {
         if (llmProvider !== "ollama" && !llmApiKey) { setStatus(t("status.api_key_missing")); return; }
 
         const fileType = getFileType();
+        setLastTranslationAt(Date.now());
         setBusy(true); setProgress(0); setStatus(t("sidebar.translate.preparing")); setAppStatus(APP_STATUS.TRANSLATING);
         setBlocks(prev => prev.map(b => ({ ...b, isTranslating: true })));
 
@@ -198,7 +199,7 @@ export function useDocumentProcessor() {
             const res = await fetch(`${API_BASE}/api/${fileType}/apply`, { method: "POST", body: formData });
             if (!res.ok) throw new Error(t("status.apply_failed"));
             const result = await res.json();
-            if (result.status !== "success" || !result.download_url) throw new Error("後端生成失敗");
+            if (result.status !== "success" || !result.download_url) throw new Error(t("status.backend_generate_failed"));
             window.location.href = `${API_BASE}${result.download_url}`;
             setStatus(t("sidebar.apply.completed")); setAppStatus(APP_STATUS.EXPORT_COMPLETED);
         } catch (error) {

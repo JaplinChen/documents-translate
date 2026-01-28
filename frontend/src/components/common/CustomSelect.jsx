@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useTranslation } from "react-i18next";
+import { getOptionLabel } from "../../utils/appHelpers";
 import { createPortal } from 'react-dom';
 
 /**
  * CustomSelect - 專業級自定義下拉選單 (Portal 版本)
  * 使用 ReactDOM.createPortal 將選單清單渲染至 body，徹底解決 overflow: hidden 的裁剪問題。
  */
-export function CustomSelect({ options = [], value, onChange, className = "", placeholder = "請選擇" }) {
+export function CustomSelect({ options = [], value, onChange, className = "", placeholder = "" }) {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
     const containerRef = useRef(null);
@@ -73,7 +76,7 @@ export function CustomSelect({ options = [], value, onChange, className = "", pl
                             setIsOpen(false);
                         }}
                     >
-                        {opt.label || opt.name}
+                        {getOptionLabel(t, opt)}
                     </li>
                 );
             })}
@@ -87,7 +90,7 @@ export function CustomSelect({ options = [], value, onChange, className = "", pl
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <span className="selected-text">
-                    {selectedOption ? (selectedOption.label || selectedOption.name) : placeholder}
+                    {selectedOption ? getOptionLabel(t, selectedOption) : (placeholder || t("common.select_placeholder"))}
                 </span>
                 <span className={`custom-select-arrow ${isOpen ? 'is-rotated' : ''}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

@@ -83,10 +83,10 @@ export function useKeyboardShortcuts({
  * Shortcut definitions for help display
  */
 export const SHORTCUTS = [
-    { keys: ["Cmd/Ctrl", "S"], action: "儲存翻譯進度", category: "general" },
-    { keys: ["Cmd/Ctrl", "Enter"], action: "開始 AI 翻譯", category: "translate" },
-    { keys: ["Cmd/Ctrl", "Shift", "A"], action: "全選/取消全選區塊", category: "selection" },
-    { keys: ["Esc"], action: "關閉彈窗", category: "navigation" },
+    { keys: ["Cmd/Ctrl", "S"], translationKey: "components.shortcuts.actions.save_progress", category: "general" },
+    { keys: ["Cmd/Ctrl", "Enter"], translationKey: "components.shortcuts.actions.start_translate", category: "translate" },
+    { keys: ["Cmd/Ctrl", "Shift", "A"], translationKey: "components.shortcuts.actions.toggle_select", category: "selection" },
+    { keys: ["Esc"], translationKey: "components.shortcuts.actions.close_modal", category: "navigation" },
 ];
 
 export default useKeyboardShortcuts;

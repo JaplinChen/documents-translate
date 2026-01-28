@@ -124,8 +124,8 @@ export function Sidebar({
                                     <div className="flex gap-2 flex-wrap">
                                         <ExportButton format="docx" label="DOCX" blocks={blocks} disabled={!canApply} />
                                         <ExportButton format="xlsx" label="XLSX" blocks={blocks} disabled={!canApply} />
-                                        <ExportButton format="pdf" label="PDF" blocks={blocks} disabled={!canApply} />
                                         <ExportButton format="txt" label="TXT" blocks={blocks} disabled={!canApply} />
+                                        <ExportButton format="md" label="Markdown" blocks={blocks} disabled={!canApply} />
                                     </div>
                                 </div>
                             )}

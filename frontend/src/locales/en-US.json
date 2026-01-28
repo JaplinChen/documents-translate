@@ -56,7 +56,7 @@
             "completed": "File Exported"
         },
         "export": {
-            "others": "Other Formats"
+            "others": "Download Translation Table"
         },
         "hint": {
             "step12": "Please complete steps 1-2 first",
@@ -68,7 +68,9 @@
         "summary": "Total {{total}}, Showing {{filtered}}",
         "empty": {
             "title": "No text blocks extracted",
-            "hint": "Please upload a document and click 'Analyze' first"
+            "hint": "Please upload a document and click 'Analyze' first",
+            "preview": "Visual Preview",
+            "batch": "Batch Edit"
         },
         "filter": {
             "search": "Search",
@@ -125,7 +127,13 @@
         },
         "shortcuts": {
             "title": "⌨️ Shortcuts Guide",
-            "confirm": "Got it"
+            "confirm": "Got it",
+            "actions": {
+                "save_progress": "Save translation progress",
+                "start_translate": "Start AI translation",
+                "toggle_select": "Select/Deselect all blocks",
+                "close_modal": "Close modal"
+            }
         },
         "block_card": {
             "apply": "Apply",
@@ -140,7 +148,10 @@
             "output": "Output",
             "placeholder": "Enter translation or correction text",
             "tools_glossary_title": "Add to Glossary",
-            "tools_memory_title": "Add to Translation Memory"
+            "tools_memory_title": "Add to Translation Memory",
+            "bilingual": "Bilingual",
+            "correction": "Correction",
+            "draft": "Draft"
         }
     },
     "settings": {
@@ -204,7 +215,14 @@
         "status": {
             "saving": "Saving...",
             "saved": "Saved",
-            "failed": "Save Failed"
+            "failed": "Save Failed",
+            "api_key_missing": "Please enter API Key",
+            "models_detecting": "Detecting models...",
+            "models_detected": "Detected {{count}} models",
+            "models_not_found": "No models detected",
+            "models_detect_failed": "Model detection failed",
+            "ocr_load_failed": "OCR settings load failed",
+            "ocr_save_failed": "OCR settings save failed"
         },
         "ai": {
             "tone_title": "Translation Style & Tone",
@@ -239,7 +257,22 @@
             "sensitivity_loose": "Loose (More Rewrites)",
             "sensitivity_strict": "Strict (Review Only)",
             "theme_title": "Theme Color Specs",
-            "line_style_title": "Line Style"
+            "line_style_title": "Line Style",
+            "hint": "Hint: Visual styles apply to PPT correction marks. Adjust the threshold to control correction strength.",
+            "sensitivity_steps": {
+                "s1": "Most Loose",
+                "s2": "Loose",
+                "s3": "Balanced",
+                "s4": "Strict",
+                "s5": "Most Strict"
+            },
+            "sensitivity_desc": {
+                "s1": "Allow heavy rewrites",
+                "s2": "Allow rewrites",
+                "s3": "Moderate edits",
+                "s4": "Minor edits",
+                "s5": "Fix typos only"
+            }
         },
         "llm": {
             "api_key": "API Key",
@@ -281,7 +314,8 @@
             "save": "Save",
             "cancel": "Cancel",
             "convert_preserve": "To Preserved",
-            "convert_glossary": "To Glossary"
+            "convert_glossary": "To Glossary",
+            "load_more": "Load More"
         },
         "fields": {
             "source_text": "Source Text",
@@ -297,9 +331,12 @@
             "actions": "Actions"
         },
         "confirm": {
-            "delete": "Are you sure you want to delete this item?"
+            "delete": "Are you sure you want to delete this item?",
+            "clear_memory": "Clear all translation memory? This cannot be undone.",
+            "clear_glossary": "Clear all glossary terms? This cannot be undone."
         },
         "empty": "No Data",
+        "list_summary": "Showing {{shown}} / {{total}}",
         "preserve": {
             "search_placeholder": "Search terms...",
             "category_all": "All Categories",
@@ -334,8 +371,34 @@
                 "update_fail": "Update failed",
                 "export_fail": "Export failed",
                 "import_success": "Import success: {{imported}} rows, Skipped: {{skipped}} rows",
-                "import_fail": "Import failed"
+                "import_fail": "Import failed",
+                "convert_confirm": "Convert this term to glossary? (Original record will be removed)",
+                "batch_convert_confirm": "Convert selected terms to glossary? (Original records will be removed)"
             }
+        },
+        "batch": {
+            "confirm_delete": "Delete selected {{count}} items?",
+            "confirm_convert": "Convert selected {{count}} items {{action}}? (Original records will be removed)",
+            "convert_success": "Converted {{count}} items",
+            "convert_failed": ", failed {{count}} items",
+            "selected_count": "Selected {{count}}",
+            "to_preserve": "to Preserved Terms",
+            "to_glossary": "to Glossary",
+            "delete": "Batch Delete"
+        },
+        "alerts": {
+            "save_glossary_failed": "Save glossary failed: {{message}}",
+            "save_memory_failed": "Save memory failed: {{message}}",
+            "convert_failed": "Convert failed",
+            "convert_failed_detail": "Convert failed: {{message}}",
+            "convert_success": "Added \"{{text}}\" to preserved terms"
+        },
+        "glossary_extract": {
+            "processing": "Extracting terms...",
+            "failed": "Extraction failed",
+            "failed_detail": "Extraction failed: {{message}}",
+            "empty": "No obvious terms detected",
+            "success": "Extraction succeeded, added {{count}} terms"
         }
     },
     "common": {
@@ -346,7 +409,11 @@
         "delete": "Delete",
         "note": "Note",
         "cancel": "Cancel",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "select_placeholder": "Select",
+        "unknown_error": "Unknown error",
+        "loading": "Loading...",
+        "download": "Download"
     },
     "status": {
         "extracting": "Extracting...",
@@ -360,6 +427,63 @@
         "translate_failed": "Translation failed",
         "apply_failed": "Export failed",
         "server_error": "Server connection error",
-        "server_timeout": "Server timeout"
+        "server_timeout": "Server timeout",
+        "backend_generate_failed": "Backend generation failed"
+    },
+    "language": {
+        "options": {
+            "auto": "Auto",
+            "vi": "Tiếng Việt",
+            "zh_tw": "Traditional Chinese",
+            "zh_cn": "Simplified Chinese",
+            "en": "English",
+            "ja": "日本語",
+            "ko": "한국어"
+        },
+        "ui": {
+            "zh_tw": "繁體中文",
+            "en_us": "English",
+            "vi": "Tiếng Việt"
+        }
+    },
+    "export": {
+        "title": "Select Export Format",
+        "error": "Export failed ({{status}})",
+        "formats": {
+            "pptx": "PowerPoint (.pptx)",
+            "docx": "Word (.docx)",
+            "xlsx": "Excel (.xlsx)",
+            "txt": "Plain Text (.txt)",
+            "md": "Markdown (.md)"
+        }
+    },
+    "term_suggestions": {
+        "title": "🔍 Smart Term Suggestions",
+        "count": "{{count}} suggested terms",
+        "loading": "Analyzing text...",
+        "empty": "No suggested terms found",
+        "add": "+ Add to Glossary",
+        "added": "✓ Added",
+        "fetch_failed": "Failed to fetch term suggestions"
+    },
+    "utils": {
+        "model_detect_hint": {
+            "ollama": "Please check:\n1. Ollama service is running\n2. Base URL is correct\n3. Model is downloaded",
+            "generic": "Please check:\n1. API Key is correct\n2. Model name exists\n3. Network connection is OK"
+        }
+    },
+    "history": {
+        "load_json_blocked": "JSON history files cannot be loaded into the editor. Please download instead.",
+        "confirm_delete": "Delete this file?",
+        "confirm_reset_all": "Warning: this will permanently delete all TM, glossary cache, and history exports. Continue?",
+        "reset_success": "Cleanup complete, deleted {{count}} files",
+        "reset_warning": "Tip: to fully re-translate or clear inventory, click the button on the right.",
+        "reset_all": "Clear all cache & files",
+        "empty": "No history found",
+        "filename": "File Name",
+        "date": "Date",
+        "size": "Size",
+        "actions": "Actions",
+        "load": "Load into Editor"
     }
 }

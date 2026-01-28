@@ -1,15 +1,75 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 from collections.abc import Iterable
 from pathlib import Path
 
+from backend.services.language_detect import detect_language
 # Ensure we use the centralized data volume at /app/data
 DB_PATH = Path("data/translation_memory.db")
 
+_PRESERVE_TERMS_CACHE: list[dict] = []
+_PRESERVE_TERMS_MTIME: float | None = None
+
 # Module-level initialization flag for performance
 _DB_INITIALIZED = False
+
+
+def _load_preserve_terms() -> tuple[list[dict], float | None]:
+    base_path = Path(__file__).parent.parent
+    possible_paths = [
+        base_path / "data" / "preserve_terms.json",
+        Path("data/preserve_terms.json"),
+    ]
+    latest_mtime: float | None = None
+    latest_terms: list[dict] = []
+    for preserve_file in possible_paths:
+        if not preserve_file.exists():
+            continue
+        try:
+            stat = preserve_file.stat()
+            if latest_mtime is None or stat.st_mtime > latest_mtime:
+                with open(preserve_file, encoding="utf-8") as f:
+                    latest_terms = json.load(f)
+                latest_mtime = stat.st_mtime
+        except Exception:
+            continue
+    return latest_terms, latest_mtime
+
+
+def _get_preserve_terms() -> list[dict]:
+    global _PRESERVE_TERMS_CACHE, _PRESERVE_TERMS_MTIME
+    terms, mtime = _load_preserve_terms()
+    if mtime is None:
+        _PRESERVE_TERMS_CACHE = []
+        _PRESERVE_TERMS_MTIME = None
+        return _PRESERVE_TERMS_CACHE
+    if _PRESERVE_TERMS_MTIME != mtime:
+        _PRESERVE_TERMS_CACHE = terms
+        _PRESERVE_TERMS_MTIME = mtime
+    return _PRESERVE_TERMS_CACHE
+
+
+def _is_preserve_term(text: str, terms: list[dict]) -> bool:
+    if not text:
+        return False
+    text_clean = text.strip()
+    if not text_clean:
+        return False
+    for term_entry in terms:
+        term = (term_entry.get("term") or "").strip()
+        if not term:
+            continue
+        case_sensitive = term_entry.get("case_sensitive", True)
+        if case_sensitive:
+            if text_clean == term:
+                return True
+        else:
+            if text_clean.lower() == term.lower():
+                return True
+    return False
 
 
 SCHEMA_SQL = """
@@ -46,6 +106,24 @@ def _ensure_db() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(DB_PATH) as conn:
         conn.executescript(SCHEMA_SQL)
+        # Deduplicate existing glossary rows before adding unique index.
+        conn.execute(
+            (
+                "DELETE FROM glossary "
+                "WHERE id NOT IN ("
+                "  SELECT MAX(id) FROM glossary "
+                "  GROUP BY source_lang, target_lang, source_text"
+                ")"
+            )
+        )
+        # Enforce uniqueness by source/target/source_text.
+        conn.execute(
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "idx_glossary_unique "
+                "ON glossary (source_lang, target_lang, source_text)"
+            )
+        )
     _DB_INITIALIZED = True
 
 
@@ -63,6 +141,12 @@ def _hash_text(
         )
         payload += f"||{ctx_str}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _normalize_glossary_text(text: str | None) -> str:
+    if not text:
+        return ""
+    return " ".join(text.strip().split())
 
 
 def lookup_tm(
@@ -86,11 +170,35 @@ def save_tm(
     translated: str,
     context: dict | None = None,
 ) -> None:
-    if not text:
+    if not text or not translated:
         return
     _ensure_db()
+    source_text = text.strip()
+    target_text = translated.strip()
+    if not source_text or not target_text:
+        return
+    preserve_terms = _get_preserve_terms()
+    if _is_preserve_term(source_text, preserve_terms):
+        return
     key = _hash_text(source_lang, target_lang, text, context=context)
     with sqlite3.connect(DB_PATH) as conn:
+        normalized_source = _normalize_glossary_text(source_text)
+        cur = conn.execute(
+            (
+                "SELECT 1 FROM glossary "
+                "WHERE source_lang = ? AND target_lang = ? AND source_text = ? "
+                "LIMIT 1"
+            ),
+            (source_lang, target_lang, normalized_source),
+        )
+        if cur.fetchone():
+            return
+        cur = conn.execute(
+            "SELECT 1 FROM tm WHERE source_text = ? AND target_text = ? LIMIT 1",
+            (source_text, target_text),
+        )
+        if cur.fetchone():
+            return
         conn.execute(
             (
                 "INSERT OR REPLACE INTO tm "
@@ -186,6 +294,7 @@ def seed_glossary(
     entries: Iterable[tuple[str, str, str, str, int | None]],
 ) -> None:
     _ensure_db()
+    preserve_terms = _get_preserve_terms()
     with sqlite3.connect(DB_PATH) as conn:
         for (
             source_lang,
@@ -194,6 +303,9 @@ def seed_glossary(
             target_text,
             priority,
         ) in entries:
+            source_text = _normalize_glossary_text(source_text)
+            if _is_preserve_term(source_text, preserve_terms):
+                continue
             conn.execute(
                 (
                     "DELETE FROM glossary "
@@ -213,7 +325,7 @@ def seed_glossary(
                     source_lang,
                     target_lang,
                     source_text,
-                    target_text,
+                    _normalize_glossary_text(target_text),
                     priority,
                 ),
             )
@@ -239,26 +351,56 @@ def seed_tm(entries: Iterable[tuple[str, str, str, str]]) -> None:
 
 def get_glossary(limit: int = 200) -> list[dict]:
     _ensure_db()
+    preserve_terms = _get_preserve_terms()
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.execute(
             (
                 "SELECT id, source_lang, target_lang, source_text, "
-                "target_text, priority "
+                "target_text, priority, created_at "
                 "FROM glossary ORDER BY priority DESC, id ASC LIMIT ?"
             ),
             (limit,),
         )
         rows = cur.fetchall()
+        delete_ids: list[int] = []
+        updates: list[tuple[str, int]] = []
+        for row in rows:
+            entry_id, source_lang, _, source_text, _, _, _ = row
+            if _is_preserve_term(source_text, preserve_terms):
+                delete_ids.append(entry_id)
+                continue
+            if not source_lang or source_lang in {"auto", "unknown"}:
+                detected = detect_language(source_text or "")
+                if detected and detected != source_lang:
+                    updates.append((detected, entry_id))
+        if delete_ids:
+            conn.executemany(
+                "DELETE FROM glossary WHERE id = ?",
+                [(entry_id,) for entry_id in delete_ids],
+            )
+        if updates:
+            conn.executemany(
+                "UPDATE glossary SET source_lang = ? WHERE id = ?",
+                updates,
+            )
+            conn.commit()
+            update_map = {entry_id: lang for lang, entry_id in updates}
+        else:
+            update_map = {}
+        if delete_ids and not updates:
+            conn.commit()
     return [
         {
             "id": row[0],
-            "source_lang": row[1],
+            "source_lang": update_map.get(row[0], row[1]),
             "target_lang": row[2],
             "source_text": row[3],
             "target_text": row[4],
             "priority": row[5],
+            "created_at": row[6],
         }
         for row in rows
+        if row[0] not in delete_ids
     ]
 
 
@@ -268,7 +410,7 @@ def get_tm(limit: int = 200) -> list[dict]:
         cur = conn.execute(
             (
                 "SELECT id, source_lang, target_lang, source_text, "
-                "target_text FROM tm ORDER BY id DESC LIMIT ?"
+                "target_text, created_at FROM tm ORDER BY id DESC LIMIT ?"
             ),
             (limit,),
         )
@@ -280,13 +422,35 @@ def get_tm(limit: int = 200) -> list[dict]:
             "target_lang": row[2],
             "source_text": row[3],
             "target_text": row[4],
+            "created_at": row[5],
         }
         for row in rows
     ]
 
 
+def get_glossary_count() -> int:
+    _ensure_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.execute("SELECT COUNT(1) FROM glossary")
+        row = cur.fetchone()
+    return int(row[0] or 0)
+
+
+def get_tm_count() -> int:
+    _ensure_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.execute("SELECT COUNT(1) FROM tm")
+        row = cur.fetchone()
+    return int(row[0] or 0)
+
+
 def upsert_glossary(entry: dict) -> None:
     _ensure_db()
+    preserve_terms = _get_preserve_terms()
+    entry_source = _normalize_glossary_text(entry.get("source_text", ""))
+    entry_target = _normalize_glossary_text(entry.get("target_text", ""))
+    if _is_preserve_term(entry_source, preserve_terms):
+        return
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             (
@@ -296,7 +460,7 @@ def upsert_glossary(entry: dict) -> None:
             (
                 entry.get("source_lang"),
                 entry.get("target_lang"),
-                entry.get("source_text"),
+                entry_source,
             ),
         )
         conn.execute(
@@ -309,8 +473,8 @@ def upsert_glossary(entry: dict) -> None:
             (
                 entry.get("source_lang"),
                 entry.get("target_lang"),
-                entry.get("source_text"),
-                entry.get("target_text"),
+                entry_source,
+                entry_target,
                 entry.get("priority", 0),
             ),
         )
@@ -321,8 +485,13 @@ def batch_upsert_glossary(entries: list[dict]) -> None:
     if not entries:
         return
     _ensure_db()
+    preserve_terms = _get_preserve_terms()
     with sqlite3.connect(DB_PATH) as conn:
         for entry in entries:
+            entry_source = _normalize_glossary_text(entry.get("source_text", ""))
+            entry_target = _normalize_glossary_text(entry.get("target_text", ""))
+            if _is_preserve_term(entry_source, preserve_terms):
+                continue
             conn.execute(
                 (
                     "DELETE FROM glossary "
@@ -332,7 +501,7 @@ def batch_upsert_glossary(entries: list[dict]) -> None:
                 (
                     entry.get("source_lang"),
                     entry.get("target_lang"),
-                    entry.get("source_text"),
+                    entry_source,
                 ),
             )
             conn.execute(
@@ -345,8 +514,8 @@ def batch_upsert_glossary(entries: list[dict]) -> None:
                 (
                     entry.get("source_lang"),
                     entry.get("target_lang"),
-                    entry.get("source_text"),
-                    entry.get("target_text"),
+                    entry_source,
+                    entry_target,
                     entry.get("priority", 0),
                 ),
             )

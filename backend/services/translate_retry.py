@@ -105,8 +105,7 @@ def _should_save_tm(
     translated_text: str, target_language: str, use_tm: bool
 ) -> bool:
     return (
-        use_tm
-        and not has_placeholder(translated_text)
+        not has_placeholder(translated_text)
         and matches_target_language(translated_text, target_language)
     )
 

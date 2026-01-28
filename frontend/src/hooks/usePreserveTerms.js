@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "../constants";
+import { useUIStore } from "../store/useUIStore";
 
 export function usePreserveTerms() {
     const { t } = useTranslation();
+    const targetLang = useUIStore((state) => state.targetLang);
+    const { setLastPreserveAt, setLastGlossaryAt } = useUIStore();
     const [terms, setTerms] = useState([]);
     const [loading, setLoading] = useState(false);
     const [filterText, setFilterText] = useState("");
@@ -20,7 +23,13 @@ export function usePreserveTerms() {
             const res = await fetch(`${API_BASE}/api/preserve-terms`);
             if (res.ok) {
                 const data = await res.json();
-                setTerms(data.terms || []);
+                const { lastPreserveAt: latestPreserveAt } = useUIStore.getState();
+                const parsed = (data.terms || []).map((term) => {
+                    if (!term?.created_at || !latestPreserveAt) return { ...term, is_new: false };
+                    const createdTs = Date.parse(term.created_at);
+                    return { ...term, is_new: !Number.isNaN(createdTs) && createdTs >= latestPreserveAt };
+                });
+                setTerms(parsed);
             }
         } catch (err) {
             console.error(err);
@@ -37,6 +46,7 @@ export function usePreserveTerms() {
         if (!newTerm.term.trim()) return;
         setLoading(true);
         try {
+            setLastPreserveAt(Date.now());
             const res = await fetch(`${API_BASE}/api/preserve-terms`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -107,6 +117,7 @@ export function usePreserveTerms() {
         const file = e.target.files[0];
         if (!file) return;
         try {
+            setLastPreserveAt(Date.now());
             const csvText = await file.text();
             const res = await fetch(`${API_BASE}/api/preserve-terms/import`, {
                 method: "POST",
@@ -128,23 +139,19 @@ export function usePreserveTerms() {
     };
 
     const handleConvertToGlossary = async (term) => {
-        if (!confirm("確定要將此術語轉為對照表嗎？（原記錄將自動刪除）")) return;
+        if (!confirm(t("manage.preserve.alerts.convert_confirm"))) return;
         try {
-            const res = await fetch(`${API_BASE}/api/tm/glossary`, {
+            setLastGlossaryAt(Date.now());
+            const res = await fetch(`${API_BASE}/api/preserve-terms/convert-to-glossary`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    source_lang: "auto",
-                    target_lang: "zh-TW",
-                    source_text: term.term,
-                    target_text: term.term,
+                    id: term.id,
+                    target_lang: targetLang || "zh-TW",
                     priority: 10,
                 })
             });
             if (res.ok) {
-                await fetch(`${API_BASE}/api/preserve-terms/${term.id}`, {
-                    method: "DELETE",
-                });
                 fetchTerms();
             }
         } catch (err) {

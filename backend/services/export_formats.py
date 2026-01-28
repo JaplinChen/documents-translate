@@ -6,12 +6,29 @@ Supports exporting translations to various formats:
 - Excel (XLSX) - translation comparison spreadsheet
 - Plain Text (TXT) - simple text export
 - PDF (PDF) - bilingual comparison table
+- Markdown (MD) - bilingual comparison table
 """
 
 from __future__ import annotations
 
 import io
 from xml.sax.saxutils import escape
+
+def _get_original_text(block: dict) -> str:
+    return (
+        block.get("original_text")
+        or block.get("source_text")
+        or block.get("text")
+        or ""
+    )
+
+
+def _get_translated_text(block: dict) -> str:
+    return (
+        block.get("translated_text")
+        or block.get("target_text")
+        or ""
+    )
 
 def export_to_docx(
     blocks: list[dict],
@@ -46,8 +63,8 @@ def export_to_docx(
     for idx, block in enumerate(blocks, 1):
         row_cells = table.add_row().cells
         row_cells[0].text = str(idx)
-        row_cells[1].text = block.get("original_text", "")
-        row_cells[2].text = block.get("translated_text", "")
+        row_cells[1].text = _get_original_text(block)
+        row_cells[2].text = _get_translated_text(block)
 
     # Save to BytesIO
     output = io.BytesIO()
@@ -95,8 +112,8 @@ def export_to_xlsx(
     # Data rows
     for idx, block in enumerate(blocks, 1):
         ws.cell(row=idx + 1, column=1, value=idx)
-        ws.cell(row=idx + 1, column=2, value=block.get("original_text", ""))
-        ws.cell(row=idx + 1, column=3, value=block.get("translated_text", ""))
+        ws.cell(row=idx + 1, column=2, value=_get_original_text(block))
+        ws.cell(row=idx + 1, column=3, value=_get_translated_text(block))
         ws.cell(row=idx + 1, column=4, value=block.get("slide_index", 0))
         ws.cell(row=idx + 1, column=5, value=block.get("block_type", ""))
 
@@ -124,8 +141,8 @@ def export_to_txt(
     lines = []
 
     for idx, block in enumerate(blocks, 1):
-        original = block.get("original_text", "")
-        translated = block.get("translated_text", "")
+        original = _get_original_text(block)
+        translated = _get_translated_text(block)
 
         if include_original:
             lines.append(f"[{idx}] 原文: {original}")
@@ -133,6 +150,28 @@ def export_to_txt(
             lines.append("")
         else:
             lines.append(f"[{idx}] {translated}")
+
+    content = "\n".join(lines)
+    output = io.BytesIO(content.encode("utf-8"))
+    output.seek(0)
+    return output
+
+
+def export_to_md(
+    blocks: list[dict],
+) -> io.BytesIO:
+    def _md_escape(text: str) -> str:
+        return text.replace("|", "\\|").replace("\n", "<br>")
+
+    lines = []
+    lines.append("# 翻譯對照表")
+    lines.append("")
+    lines.append("| # | 原文 | 譯文 |")
+    lines.append("| --- | --- | --- |")
+    for idx, block in enumerate(blocks, 1):
+        original = _md_escape(_get_original_text(block))
+        translated = _md_escape(_get_translated_text(block))
+        lines.append(f"| {idx} | {original} | {translated} |")
 
     content = "\n".join(lines)
     output = io.BytesIO(content.encode("utf-8"))
@@ -198,11 +237,11 @@ def export_to_pdf(
 
     data = [["#", "原文", "譯文"]]
     for idx, block in enumerate(blocks, 1):
-        original = escape(block.get("original_text", "")).replace(
+        original = escape(_get_original_text(block)).replace(
             "\n",
             "<br/>",
         )
-        translated = escape(block.get("translated_text", "")).replace(
+        translated = escape(_get_translated_text(block)).replace(
             "\n",
             "<br/>",
         )
@@ -273,9 +312,9 @@ def get_export_formats() -> list[dict]:
             "available": True,
         },
         {
-            "id": "pdf",
-            "label": "PDF 對照表 (.pdf)",
-            "icon": "🖨️",
+            "id": "md",
+            "label": "Markdown 對照表 (.md)",
+            "icon": "🧾",
             "available": True,
         },
     ]

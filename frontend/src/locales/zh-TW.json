@@ -57,7 +57,7 @@
             "completed": "已輸出檔案"
         },
         "export": {
-            "others": "其他格式"
+            "others": "下載翻譯對照表"
         },
         "hint": {
             "step12": "請先完成步驟 1-2",
@@ -69,7 +69,9 @@
         "summary": "共 {{total}} 筆，顯示 {{filtered}} 筆",
         "empty": {
             "title": "尚未抽取任何文字區塊",
-            "hint": "請先上傳文件並按下「抽取區塊」"
+            "hint": "請先上傳文件並按下「抽取區塊」",
+            "preview": "視覺預覽",
+            "batch": "批次編輯"
         },
         "filter": {
             "search": "搜尋",
@@ -126,7 +128,13 @@
         },
         "shortcuts": {
             "title": "⌨️ 快捷鍵說明",
-            "confirm": "我知道了"
+            "confirm": "我知道了",
+            "actions": {
+                "save_progress": "儲存翻譯進度",
+                "start_translate": "開始 AI 翻譯",
+                "toggle_select": "全選/取消全選區塊",
+                "close_modal": "關閉彈窗"
+            }
         },
         "block_card": {
             "apply": "套用",
@@ -141,7 +149,10 @@
             "output": "輸出",
             "placeholder": "輸入翻譯內容或校正文字",
             "tools_glossary_title": "加入術語庫",
-            "tools_memory_title": "加入翻譯記憶"
+            "tools_memory_title": "加入翻譯記憶",
+            "bilingual": "Bilingual",
+            "correction": "Correction",
+            "draft": "暫存"
         }
     },
     "settings": {
@@ -204,7 +215,14 @@
         "status": {
             "saving": "儲存中...",
             "saved": "已儲存",
-            "failed": "儲存失敗"
+            "failed": "儲存失敗",
+            "api_key_missing": "請先輸入 API Key",
+            "models_detecting": "模型偵測中...",
+            "models_detected": "已偵測 {{count}} 個模型",
+            "models_not_found": "未偵測到模型",
+            "models_detect_failed": "模型偵測失敗",
+            "ocr_load_failed": "OCR 設定讀取失敗",
+            "ocr_save_failed": "OCR 設定儲存失敗"
         },
         "ai": {
             "tone_title": "翻譯風格與語氣 (Tone)",
@@ -236,10 +254,23 @@
             "dashdot": "點虛線",
             "solid": "實線",
             "sensitivity_label": "相似度閾值 (Sensitivity)",
-            "sensitivity_loose": "寬鬆 (改寫多)",
-            "sensitivity_strict": "嚴謹 (僅校對)",
+            "sensitivity_steps": {
+                "s1": "最寬鬆",
+                "s2": "寬鬆",
+                "s3": "平衡",
+                "s4": "嚴謹",
+                "s5": "最嚴謹"
+            },
+            "sensitivity_desc": {
+                "s1": "可大幅改寫",
+                "s2": "允許改寫",
+                "s3": "適度調整",
+                "s4": "少量調整",
+                "s5": "只修錯字"
+            },
             "theme_title": "主題色彩規範",
-            "line_style_title": "線條樣式"
+            "line_style_title": "線條樣式",
+            "hint": "提示：視覺樣式將套用於 Powerpoint 的校正標記中。調整閾值可控制校正強度。"
         },
         "llm": {
             "api_key": "API Key",
@@ -271,7 +302,11 @@
         "delete": "刪除",
         "note": "注意",
         "cancel": "取消",
-        "confirm": "確認"
+        "confirm": "確認",
+        "select_placeholder": "請選擇",
+        "unknown_error": "未知錯誤",
+        "loading": "載入中...",
+        "download": "下載"
     },
     "manage": {
         "title": "資料管理",
@@ -291,7 +326,8 @@
             "save": "保存",
             "cancel": "取消",
             "convert_preserve": "轉術語",
-            "convert_glossary": "轉對照表"
+            "convert_glossary": "轉對照表",
+            "load_more": "載入更多"
         },
         "fields": {
             "source_text": "來源文字",
@@ -307,9 +343,12 @@
             "actions": "操作"
         },
         "confirm": {
-            "delete": "確定要刪除這筆資料嗎？"
+            "delete": "確定要刪除這筆資料嗎？",
+            "clear_memory": "確定要清除全部翻譯記憶嗎？此動作無法復原。",
+            "clear_glossary": "確定要清除全部術語嗎？此動作無法復原。"
         },
         "empty": "尚無資料",
+        "list_summary": "顯示 {{shown}} / {{total}}",
         "preserve": {
             "search_placeholder": "搜尋術語...",
             "category_all": "全部分類",
@@ -344,8 +383,34 @@
                 "update_fail": "更新失敗",
                 "export_fail": "匯出失敗",
                 "import_success": "匯入成功：{{imported}} 筆，略過：{{skipped}} 筆",
-                "import_fail": "匯入失敗"
+                "import_fail": "匯入失敗",
+                "convert_confirm": "確定要將此術語轉為對照表嗎？（原記錄將自動刪除）",
+                "batch_convert_confirm": "確定要將選取的術語轉為對照表嗎？（原記錄將自動刪除）"
             }
+        },
+        "batch": {
+            "confirm_delete": "確定要刪除選取的 {{count}} 筆資料嗎？",
+            "confirm_convert": "確定要將選取的 {{count}} 筆資料{{action}}嗎？（原記錄將自動刪除）",
+            "convert_success": "已轉換 {{count}} 筆",
+            "convert_failed": "，失敗 {{count}} 筆",
+            "selected_count": "已選取 {{count}} 筆",
+            "to_preserve": "轉為術語",
+            "to_glossary": "轉為對照表",
+            "delete": "批次刪除"
+        },
+        "alerts": {
+            "save_glossary_failed": "儲存術語失敗: {{message}}",
+            "save_memory_failed": "儲存記憶失敗: {{message}}",
+            "convert_failed": "轉換失敗",
+            "convert_failed_detail": "轉換失敗：{{message}}",
+            "convert_success": "已將 \"{{text}}\" 添加到保留術語"
+        },
+        "glossary_extract": {
+            "processing": "正在智慧提取術語...",
+            "failed": "提取失敗",
+            "failed_detail": "提取失敗：{{message}}",
+            "empty": "未偵測到明顯術語",
+            "success": "智慧提取成功，新增 {{count}} 筆術語"
         }
     },
     "status": {
@@ -360,6 +425,63 @@
         "translate_failed": "翻譯發生錯誤",
         "apply_failed": "套用失敗",
         "server_error": "伺服器連線異常",
-        "server_timeout": "伺服器響應超時"
+        "server_timeout": "伺服器響應超時",
+        "backend_generate_failed": "後端生成失敗"
+    },
+    "language": {
+        "options": {
+            "auto": "自動 (Auto)",
+            "vi": "Tiếng Việt",
+            "zh_tw": "繁體中文",
+            "zh_cn": "简体中文",
+            "en": "English",
+            "ja": "日本語",
+            "ko": "한국어"
+        },
+        "ui": {
+            "zh_tw": "繁體中文",
+            "en_us": "English",
+            "vi": "Tiếng Việt"
+        }
+    },
+    "export": {
+        "title": "選擇匯出格式",
+        "error": "匯出失敗 ({{status}})",
+        "formats": {
+            "pptx": "PowerPoint (.pptx)",
+            "docx": "Word (.docx)",
+            "xlsx": "Excel (.xlsx)",
+            "txt": "純文字 (.txt)",
+            "md": "Markdown (.md)"
+        }
+    },
+    "term_suggestions": {
+        "title": "🔍 智慧術語建議",
+        "count": "{{count}} 個建議術語",
+        "loading": "正在分析文本...",
+        "empty": "未發現建議術語",
+        "add": "+ 加入術語庫",
+        "added": "✓ 已加入",
+        "fetch_failed": "無法取得術語建議"
+    },
+    "utils": {
+        "model_detect_hint": {
+            "ollama": "請檢查：\n1. Ollama 服務是否啟動\n2. Base URL 是否正確\n3. 模型是否已下載",
+            "generic": "請檢查：\n1. API Key 是否正確\n2. 模型名稱是否存在\n3. 網路連線是否正常"
+        }
+    },
+    "history": {
+        "load_json_blocked": "JSON 歷史檔無法載入編輯器，請改用下載",
+        "confirm_delete": "確定要刪除這個檔案嗎？",
+        "confirm_reset_all": "警告：這將永久刪除所有翻譯記憶庫 (TM)、用語集快取以及歷史匯出檔案。是否確定執行？",
+        "reset_success": "清理完成，已刪除 {{count}} 個檔案",
+        "reset_warning": "管理提示：若想徹底重新翻譯或清除庫存，請點擊右側按鈕",
+        "reset_all": "清理所有快取與檔案",
+        "empty": "沒有歷史記錄",
+        "filename": "檔名",
+        "date": "日期",
+        "size": "大小",
+        "actions": "操作",
+        "load": "載入到編輯器"
     }
 }

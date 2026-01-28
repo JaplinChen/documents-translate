@@ -17,6 +17,7 @@ LANG_MAP = {
 }
 
 _CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf]")
+_ASCII_ONLY_RE = re.compile(r"^[A-Za-z0-9\s\-\_/\\.,\(\)\[\]{}'\"&:+#%]+$")
 _VI_DIACRITIC_RE = re.compile(
     r"["
     r"\u00C0-\u00C3\u00C8-\u00CA\u00CC-\u00CD\u00D2-\u00D5\u00D9-\u00DA\u00DD"
@@ -79,6 +80,12 @@ def detect_language(text: str) -> str | None:
         total_len = len(text.strip())
         if cjk_count / total_len > 0.3 or len(text.strip()) < 5:
             return _detect_zh_variant(text)
+
+    ascii_text = text.strip()
+    if _ASCII_ONLY_RE.fullmatch(ascii_text):
+        alpha_count = len(re.findall(r"[A-Za-z]", ascii_text))
+        if alpha_count >= 2:
+            return "en"
 
     try:
         lang = _normalize_lang(detect(text))

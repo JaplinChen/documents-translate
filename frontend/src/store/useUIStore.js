@@ -51,4 +51,14 @@ export const useUIStore = create((set) => ({
     setFilterText: (text) => set({ filterText: text }),
     setFilterType: (type) => set({ filterType: type }),
     setFilterSlide: (slide) => set({ filterSlide: slide }),
+
+    // --- TM Highlight ---
+    lastTranslationAt: null,
+    setLastTranslationAt: (timestamp) => set({ lastTranslationAt: timestamp }),
+    lastGlossaryAt: null,
+    setLastGlossaryAt: (timestamp) => set({ lastGlossaryAt: timestamp }),
+    lastMemoryAt: null,
+    setLastMemoryAt: (timestamp) => set({ lastMemoryAt: timestamp }),
+    lastPreserveAt: null,
+    setLastPreserveAt: (timestamp) => set({ lastPreserveAt: timestamp }),
 }));

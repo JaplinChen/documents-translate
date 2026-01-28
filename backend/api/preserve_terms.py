@@ -10,6 +10,9 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
+from backend.services.language_detect import detect_language
+from backend.services.translation_memory import upsert_glossary
+
 router = APIRouter(prefix="/api/preserve-terms")
 
 PRESERVE_TERMS_FILE = (
@@ -23,6 +26,16 @@ class PreserveTerm(BaseModel):
     category: str = "未分類"
     case_sensitive: bool = True
     created_at: str | None = None
+
+
+class ConvertToGlossaryRequest(BaseModel):
+    id: str
+    target_lang: str = "zh-TW"
+    priority: int = 10
+
+
+class PreserveTermBatch(BaseModel):
+    terms: list[PreserveTerm]
 
 
 def _load_preserve_terms() -> list[dict]:
@@ -75,6 +88,47 @@ async def create_preserve_term(term: PreserveTerm) -> dict:
     _save_preserve_terms(terms)
 
     return {"term": new_term}
+
+
+@router.post("/batch")
+async def create_preserve_terms_batch(payload: PreserveTermBatch) -> dict:
+    """Create preserve terms in batch, skipping duplicates."""
+    terms = _load_preserve_terms()
+    existing = {
+        (t.get("term") or "").lower()
+        for t in terms
+        if t.get("term")
+    }
+
+    created_terms: list[dict] = []
+    skipped = 0
+
+    for entry in payload.terms:
+        term_text = (entry.term or "").strip()
+        if not term_text:
+            continue
+        key = term_text.lower()
+        if key in existing:
+            skipped += 1
+            continue
+        new_term = {
+            "id": str(uuid4()),
+            "term": term_text,
+            "category": entry.category or "未分類",
+            "case_sensitive": entry.case_sensitive,
+            "created_at": datetime.utcnow().isoformat() + "Z",
+        }
+        terms.append(new_term)
+        created_terms.append(new_term)
+        existing.add(key)
+
+    _save_preserve_terms(terms)
+
+    return {
+        "created": len(created_terms),
+        "skipped": skipped,
+        "terms": created_terms,
+    }
 
 
 @router.put("/{term_id}")
@@ -232,3 +286,46 @@ async def convert_glossary_to_preserve_term(
     _save_preserve_terms(terms)
 
     return {"term": new_term, "message": f"已將 '{term_text}' 添加到保留術語"}
+
+
+@router.post("/convert-to-glossary")
+async def convert_preserve_term_to_glossary(
+    payload: ConvertToGlossaryRequest,
+) -> dict:
+    """Convert a preserve term to glossary entry with auto-detected source lang."""
+    terms = _load_preserve_terms()
+    term_index = None
+    term_entry = None
+    for i, existing in enumerate(terms):
+        if existing["id"] == payload.id:
+            term_index = i
+            term_entry = existing
+            break
+
+    if term_entry is None:
+        raise HTTPException(status_code=404, detail="術語不存在")
+
+    term_text = term_entry.get("term", "").strip()
+    if not term_text:
+        raise HTTPException(status_code=400, detail="術語不可為空")
+
+    detected_lang = detect_language(term_text) or "auto"
+    upsert_glossary(
+        {
+            "source_lang": detected_lang,
+            "target_lang": payload.target_lang,
+            "source_text": term_text,
+            "target_text": term_text,
+            "priority": payload.priority,
+        }
+    )
+
+    if term_index is not None:
+        terms.pop(term_index)
+        _save_preserve_terms(terms)
+
+    return {
+        "status": "ok",
+        "source_lang": detected_lang,
+        "target_lang": payload.target_lang,
+    }

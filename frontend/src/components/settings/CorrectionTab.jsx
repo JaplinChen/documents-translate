@@ -15,6 +15,20 @@ function CorrectionTab({
     setSimilarityThreshold
 }) {
     const { t } = useTranslation();
+    const safeThreshold = Number.isFinite(similarityThreshold) ? similarityThreshold : 0.75;
+    const padLabel = (text, maxLen) => {
+        const len = (text || "").length;
+        const pad = Math.max(0, maxLen - len);
+        return `${text}${"\u00A0".repeat(pad)}`;
+    };
+    const steps = [
+        { label: t("settings.correction.sensitivity_steps.s1"), value: 0.6, desc: t("settings.correction.sensitivity_desc.s1") },
+        { label: t("settings.correction.sensitivity_steps.s2"), value: 0.7, desc: t("settings.correction.sensitivity_desc.s2") },
+        { label: t("settings.correction.sensitivity_steps.s3"), value: 0.8, desc: t("settings.correction.sensitivity_desc.s3") },
+        { label: t("settings.correction.sensitivity_steps.s4"), value: 0.9, desc: t("settings.correction.sensitivity_desc.s4") },
+        { label: t("settings.correction.sensitivity_steps.s5"), value: 0.95, desc: t("settings.correction.sensitivity_desc.s5") },
+    ];
+    const maxLabelLen = Math.max(...steps.map((step) => (step.label || "").length), 0);
 
     const getBorderStyle = (dash) => {
         switch (dash) {
@@ -66,7 +80,7 @@ function CorrectionTab({
                     <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
                         <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
                             <Bot size={12} className="inline mr-1 mb-0.5" />
-                            {t("settings.correction.hint") || "提示：視覺樣式將套用於 Powerpoint 的校正標記中。調整閾值可控制校正強度。"}
+                            {t("settings.correction.hint")}
                         </p>
                     </div>
                 </div>
@@ -82,19 +96,22 @@ function CorrectionTab({
                                 <span className="text-sm font-bold text-slate-700">{t("settings.correction.sensitivity_label")}</span>
                             </div>
                             <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                {Math.round(similarityThreshold * 100)}%
+                                {Math.round(safeThreshold * 100)}%
                             </span>
                         </div>
-                        <input
-                            type="range"
-                            min="0" max="1" step="0.05"
-                            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                            value={similarityThreshold}
-                            onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
-                        />
-                        <div className="flex justify-between mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                            <span>{t("settings.correction.sensitivity_loose")}</span>
-                            <span>{t("settings.correction.sensitivity_strict")}</span>
+                        <div className="flex flex-col gap-2">
+                            <select
+                                className="select-input w-full"
+                                style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" }}
+                                value={safeThreshold}
+                                onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
+                            >
+                                {steps.map((step) => (
+                                    <option key={step.value} value={step.value}>
+                                        {padLabel(step.label, maxLabelLen)}｜{step.desc}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -133,7 +150,7 @@ function CorrectionTab({
                     <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
                         <div className="flex items-center gap-2 mb-4">
                             <Square size={18} className="text-emerald-500" />
-                            <span className="text-sm font-bold text-slate-700">線條樣式</span>
+                            <span className="text-sm font-bold text-slate-700">{t("settings.correction.line_style_title")}</span>
                         </div>
                         <div className="flex gap-2">
                             {['solid', 'dash', 'dot', 'dashdot'].map(style => (

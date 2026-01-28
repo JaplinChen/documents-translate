@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "../constants";
 
 /**
@@ -6,6 +7,7 @@ import { API_BASE } from "../constants";
  * Displays AI-suggested terms that can be added to glossary
  */
 export function TermSuggestionsPanel({ blocks, onAddTerm, onClose }) {
+    const { t } = useTranslation();
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -28,7 +30,7 @@ export function TermSuggestionsPanel({ blocks, onAddTerm, onClose }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ blocks }),
             });
-            if (!response.ok) throw new Error("無法取得術語建議");
+            if (!response.ok) throw new Error(t("term_suggestions.fetch_failed"));
             const data = await response.json();
             setSuggestions(data.suggestions || []);
         } catch (err) {
@@ -88,10 +90,10 @@ export function TermSuggestionsPanel({ blocks, onAddTerm, onClose }) {
             }}>
                 <div>
                     <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "600" }}>
-                        🔍 智慧術語建議
+                        {t("term_suggestions.title")}
                     </h3>
                     <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#6b7280" }}>
-                        {suggestions.length} 個建議術語
+                        {t("term_suggestions.count", { count: suggestions.length })}
                     </p>
                 </div>
                 {onClose && (
@@ -118,7 +120,7 @@ export function TermSuggestionsPanel({ blocks, onAddTerm, onClose }) {
             }}>
                 {loading && (
                     <div style={{ textAlign: "center", padding: "20px", color: "#6b7280" }}>
-                        正在分析文本...
+                        {t("term_suggestions.loading")}
                     </div>
                 )}
 
@@ -136,7 +138,7 @@ export function TermSuggestionsPanel({ blocks, onAddTerm, onClose }) {
 
                 {!loading && !error && suggestions.length === 0 && (
                     <div style={{ textAlign: "center", padding: "20px", color: "#6b7280" }}>
-                        未發現建議術語
+                        {t("term_suggestions.empty")}
                     </div>
                 )}
 
@@ -190,7 +192,7 @@ export function TermSuggestionsPanel({ blocks, onAddTerm, onClose }) {
                                     color: isAdded ? "#166534" : "#fff",
                                 }}
                             >
-                                {isAdded ? "✓ 已加入" : "+ 加入術語庫"}
+                                {isAdded ? t("term_suggestions.added") : t("term_suggestions.add")}
                             </button>
                         </div>
                     );

@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SHORTCUTS } from "../hooks/useKeyboardShortcuts";
 
 /**
  * Keyboard Shortcuts Help Modal
  */
 export default function ShortcutsHelp({ onClose }) {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(true);
 
     if (!isOpen) return null;
@@ -12,13 +14,6 @@ export default function ShortcutsHelp({ onClose }) {
     const handleClose = () => {
         setIsOpen(false);
         if (onClose) onClose();
-    };
-
-    const categories = {
-        general: "一般操作",
-        translate: "翻譯",
-        selection: "選取",
-        navigation: "導航"
     };
 
     const groupedShortcuts = SHORTCUTS.reduce((acc, shortcut) => {

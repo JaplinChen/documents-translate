@@ -202,6 +202,26 @@
         @apply flex gap-3 flex-wrap;
     }
 
+    .manage-create-row {
+        @apply flex flex-wrap items-center gap-2 w-full;
+    }
+
+    .manage-field-short {
+        @apply w-28 max-w-[120px];
+    }
+
+    .manage-field-number {
+        @apply w-12 max-w-[60px] text-center;
+    }
+
+    .manage-btn-square {
+        @apply w-9 h-9 min-h-[2.25rem] p-0 flex items-center justify-center;
+    }
+
+    .manage-scroll-area {
+        @apply relative flex-1 min-h-0 overflow-auto;
+    }
+
     .inline-row {
         @apply flex gap-2 items-center;
     }
@@ -264,4 +284,3 @@
         @apply text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-md;
     }
 }
-

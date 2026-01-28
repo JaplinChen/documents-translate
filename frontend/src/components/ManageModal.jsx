@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDraggableModal } from "../hooks/useDraggableModal";
+import { getOptionLabel } from "../utils/appHelpers";
 import { API_BASE } from "../constants";
 import { X, Save, Edit, Trash2, Plus, Lock, Table, Check, RotateCcw } from "lucide-react";
 import { IconButton } from "./common/IconButton";
 import PreserveTermsTab from "./manage/PreserveTermsTab";
 import HistoryTab from "./manage/HistoryTab";
+import { useSettingsStore } from "../store/useSettingsStore";
+import { useUIStore } from "../store/useUIStore";
 
 export default function ManageModal({
     open,
@@ -19,6 +22,10 @@ export default function ManageModal({
     defaultTargetLang,
     glossaryItems,
     tmItems,
+    glossaryTotal,
+    tmTotal,
+    onLoadMoreGlossary,
+    onLoadMoreMemory,
     onSeed,
     onUpsertGlossary,
     onDeleteGlossary,
@@ -64,6 +71,8 @@ export default function ManageModal({
 
     const { modalRef, position, onMouseDown } = useDraggableModal(open);
     const [customModel, setCustomModel] = useState("");
+    const correctionFillColor = useSettingsStore((state) => state.correction.fillColor);
+    const { setLastGlossaryAt, setLastMemoryAt } = useUIStore();
     const modelOptions = useMemo(() => {
         const options = [...(llmModels || [])];
         if (llmModel && !options.includes(llmModel)) options.unshift(llmModel);
@@ -82,6 +91,8 @@ export default function ManageModal({
     const handleImport = (event, path, reload) => {
         const file = event.target.files?.[0];
         if (!file) return;
+        if (isGlossary) setLastGlossaryAt(Date.now());
+        else setLastMemoryAt(Date.now());
         const formData = new FormData();
         formData.append("file", file);
         fetch(path, { method: "POST", body: formData }).then(() => reload());
@@ -130,6 +141,8 @@ export default function ManageModal({
 
     const handleCreate = async () => {
         if (!newEntry.source_text || !newEntry.target_text) return;
+        if (isGlossary) setLastGlossaryAt(Date.now());
+        else setLastMemoryAt(Date.now());
         if (isGlossary) {
             await onUpsertGlossary({
                 ...newEntry,
@@ -148,7 +161,7 @@ export default function ManageModal({
 
     const handleBatchDelete = async () => {
         if (!selectedIds.length) return;
-        if (!window.confirm(`確定要刪除選取的 ${selectedIds.length} 筆資料嗎？`)) return;
+        if (!window.confirm(t("manage.batch.confirm_delete", { count: selectedIds.length }))) return;
 
         try {
             const endpoint = isGlossary ? "glossary" : "memory";
@@ -168,20 +181,38 @@ export default function ManageModal({
 
     const handleBatchConvert = async () => {
         if (!selectedIds.length) return;
-        const msg = isGlossary ? "轉為術語" : "轉為對照表";
-        if (!window.confirm(`確定要將選取的 ${selectedIds.length} 筆資料${msg}嗎？（原記錄將自動刪除）`)) return;
+        const msg = isGlossary ? t("manage.batch.to_preserve") : t("manage.batch.to_glossary");
+        if (!window.confirm(t("manage.batch.confirm_convert", { count: selectedIds.length, action: msg }))) return;
 
         setSaving(true);
         try {
+            let successCount = 0;
+            let failCount = 0;
+            const errors = [];
             for (const id of selectedIds) {
                 const item = items.find(i => i.id === id);
                 if (item) {
-                    if (isGlossary) await onConvertToPreserveTerm(item);
-                    else await onConvertToGlossary(item);
+                    if (isGlossary) {
+                        const result = await onConvertToPreserveTerm(item, { silent: true });
+                        if (result?.ok) successCount += 1;
+                        else {
+                            failCount += 1;
+                            if (result?.error) errors.push(result.error);
+                        }
+                    } else {
+                        await onConvertToGlossary(item);
+                        successCount += 1;
+                    }
                 }
             }
             setSelectedIds([]);
             onSeed();
+            if (isGlossary) {
+                const baseMsg = t("manage.batch.convert_success", { count: successCount });
+                const failMsg = failCount > 0 ? t("manage.batch.convert_failed", { count: failCount }) : "";
+                const detail = errors.length > 0 ? `\n${errors[0]}` : "";
+                alert(`${baseMsg}${failMsg}${detail}`);
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -201,7 +232,7 @@ export default function ManageModal({
 
     return (
         <div className="modal-backdrop">
-            <div className="modal is-draggable" ref={modalRef} style={{ top: position.top, left: position.left }}>
+            <div className="modal is-draggable is-manage" ref={modalRef} style={{ top: position.top, left: position.left }}>
                 <div className="modal-header draggable-handle flex justify-between items-center" onMouseDown={onMouseDown}>
                     <h3>{t("manage.title")}</h3>
                     <IconButton icon={X} onClick={onClose} size="sm" />
@@ -212,13 +243,13 @@ export default function ManageModal({
                     <button className={`tab-btn ${tab === "tm" ? "is-active" : ""}`} type="button" onClick={() => setTab("tm")}>{t("manage.tabs.tm")}</button>
                     <button className={`tab-btn ${tab === "history" ? "is-active" : ""}`} type="button" onClick={() => setTab("history")}>{t("nav.history", "History")}</button>
                 </div>
-                <div className="modal-body">
+                <div className={`modal-body ${tab === "history" ? "" : "manage-body"}`}>
                     {tab === "history" ? (
                         <HistoryTab onLoadFile={onLoadFile} />
                     ) : tab === "preserve" ? (
                         <PreserveTermsTab onClose={onClose} />
                     ) : (
-                        <>
+                        <div className="flex flex-col h-full min-h-0">
                             <div className="action-row flex items-center justify-between gap-2">
                                 <div className="flex gap-2">
                                     <button className="btn ghost" type="button" onClick={onSeed}>{t("manage.actions.seed")}</button>
@@ -228,58 +259,74 @@ export default function ManageModal({
                                         <input type="file" accept=".csv" className="hidden-input" onChange={(event) => handleImport(event, `${API_BASE}/api/tm/${isGlossary ? "glossary" : "memory"}/import`, onSeed)} />
                                     </label>
                                     <button className="btn danger" type="button" onClick={isGlossary ? onClearGlossary : onClearMemory}>{t("manage.actions.clear_all")}</button>
+                                    <span className="text-xs font-bold text-slate-400 self-center">
+                                        {t("manage.list_summary", { shown: items.length, total: isGlossary ? glossaryTotal : tmTotal })}
+                                    </span>
+                                    {(isGlossary ? items.length < glossaryTotal : items.length < tmTotal) && (
+                                        <button
+                                            className="btn ghost compact"
+                                            type="button"
+                                            onClick={isGlossary ? onLoadMoreGlossary : onLoadMoreMemory}
+                                        >
+                                            {t("manage.actions.load_more")}
+                                        </button>
+                                    )}
                                 </div>
                                 {selectedIds.length > 0 && (
                                     <div className="batch-actions flex gap-2 animate-in fade-in slide-in-from-right-2">
-                                        <span className="text-xs font-bold text-slate-400 self-center mr-2">已選取 {selectedIds.length} 筆</span>
+                                        <span className="text-xs font-bold text-slate-400 self-center mr-2">{t("manage.batch.selected_count", { count: selectedIds.length })}</span>
                                         <button className="btn ghost compact !text-blue-600" onClick={handleBatchConvert}>
-                                            {isGlossary ? "轉術語" : "轉為對照表"}
+                                            {isGlossary ? t("manage.batch.to_preserve") : t("manage.batch.to_glossary")}
                                         </button>
-                                        <button className="btn ghost compact !text-red-500" onClick={handleBatchDelete}>批次刪除</button>
+                                        <button className="btn ghost compact !text-red-500" onClick={handleBatchDelete}>{t("manage.batch.delete")}</button>
                                     </div>
                                 )}
                             </div>
                             <div className="create-row">
-                                <div className="create-fields grid grid-cols-12 gap-2 w-full items-center">
-                                    <select className="select-input col-span-2" value={newEntry.source_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, source_lang: e.target.value }))}>
-                                        {(languageOptions || []).filter((o) => o.code !== "auto").map((o) => <option key={`src-${o.code}`} value={o.code}>{o.label}</option>)}
+                                <div className="manage-create-row">
+                                    <select className="select-input manage-field-short" value={newEntry.source_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, source_lang: e.target.value }))}>
+                                        {(languageOptions || []).filter((o) => o.code !== "auto").map((o) => (
+                                            <option key={`src-${o.code}`} value={o.code}>{getOptionLabel(t, o)}</option>
+                                        ))}
                                     </select>
-                                    <select className="select-input col-span-2" value={newEntry.target_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_lang: e.target.value }))}>
-                                        {(languageOptions || []).filter((o) => o.code !== "auto").map((o) => <option key={`tgt-${o.code}`} value={o.code}>{o.label}</option>)}
+                                    <select className="select-input manage-field-short" value={newEntry.target_lang} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_lang: e.target.value }))}>
+                                        {(languageOptions || []).filter((o) => o.code !== "auto").map((o) => (
+                                            <option key={`tgt-${o.code}`} value={o.code}>{getOptionLabel(t, o)}</option>
+                                        ))}
                                     </select>
-                                    <input className="text-input col-span-3" value={newEntry.source_text} placeholder={t("manage.fields.source_text")} onChange={(e) => setNewEntry((prev) => ({ ...prev, source_text: e.target.value }))} />
-                                    <input className="text-input col-span-3" value={newEntry.target_text} placeholder={t("manage.fields.target_text")} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_text: e.target.value }))} />
-                                    <div className="col-span-2 flex gap-1">
-                                        {isGlossary && (
-                                            <input className="text-input w-12 text-center !px-1" type="number" value={newEntry.priority} placeholder="0" onChange={(e) => setNewEntry((prev) => ({ ...prev, priority: e.target.value }))} />
-                                        )}
-                                        <button className={`btn primary flex-1 h-9 min-h-[2.25rem] flex items-center justify-center p-0`} type="button" onClick={handleCreate} title={t("manage.actions.add")}>
-                                            <Plus size={18} />
-                                        </button>
-                                    </div>
+                                    <input className="text-input flex-1 min-w-[160px]" value={newEntry.source_text} placeholder={t("manage.fields.source_text")} onChange={(e) => setNewEntry((prev) => ({ ...prev, source_text: e.target.value }))} />
+                                    <input className="text-input flex-1 min-w-[160px]" value={newEntry.target_text} placeholder={t("manage.fields.target_text")} onChange={(e) => setNewEntry((prev) => ({ ...prev, target_text: e.target.value }))} />
+                                    {isGlossary && (
+                                        <input className="text-input manage-field-number !px-1" type="number" value={newEntry.priority} placeholder="0" onChange={(e) => setNewEntry((prev) => ({ ...prev, priority: e.target.value }))} />
+                                    )}
+                                    <button className="btn primary manage-btn-square" type="button" onClick={handleCreate} title={t("manage.actions.add")}>
+                                        <Plus size={18} />
+                                    </button>
                                 </div>
                             </div>
-                            <DataTable
-                                items={items}
-                                isGlossary={isGlossary}
-                                editingKey={editingKey}
-                                draft={draft}
-                                saving={saving}
-                                selectedIds={selectedIds}
-                                makeKey={makeKey}
-                                setDraft={setDraft}
-                                onEdit={handleEdit}
-                                onSave={handleSave}
-                                onCancel={handleCancel}
-                                onDelete={handleDelete}
-                                onSelectRow={handleSelectRow}
-                                onSelectAll={handleSelectAll}
-                                onConvertToGlossary={onConvertToGlossary}
-                                onConvertToPreserveTerm={onConvertToPreserveTerm}
-                                t={t}
-                            />
-
-                        </>
+                            <div className="manage-scroll-area">
+                                <DataTable
+                                    items={items}
+                                    isGlossary={isGlossary}
+                                    editingKey={editingKey}
+                                    draft={draft}
+                                    saving={saving}
+                                    selectedIds={selectedIds}
+                                    makeKey={makeKey}
+                                    setDraft={setDraft}
+                                    onEdit={handleEdit}
+                                    onSave={handleSave}
+                                    onCancel={handleCancel}
+                                    onDelete={handleDelete}
+                                    onSelectRow={handleSelectRow}
+                                    onSelectAll={handleSelectAll}
+                                    onConvertToGlossary={onConvertToGlossary}
+                                    onConvertToPreserveTerm={onConvertToPreserveTerm}
+                                    t={t}
+                                    highlightColor={correctionFillColor}
+                                />
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -287,11 +334,48 @@ export default function ManageModal({
     );
 }
 
-function DataTable({ items, isGlossary, editingKey, draft, saving, selectedIds, makeKey, setDraft, onEdit, onSave, onCancel, onDelete, onSelectRow, onSelectAll, onConvertToGlossary, onConvertToPreserveTerm, t }) {
+function DataTable({ items, isGlossary, editingKey, draft, saving, selectedIds, makeKey, setDraft, onEdit, onSave, onCancel, onDelete, onSelectRow, onSelectAll, onConvertToGlossary, onConvertToPreserveTerm, t, highlightColor }) {
+    const safeItems = Array.isArray(items) ? items : [];
+    const [sortKey, setSortKey] = useState(null);
+    const [sortDir, setSortDir] = useState("asc");
 
-    if (items.length === 0) return <div className="data-empty">{t("manage.empty")}</div>;
+    if (safeItems.length === 0) return <div className="data-empty">{t("manage.empty")}</div>;
 
-    const allSelected = items.length > 0 && selectedIds.length === items.length;
+    const allSelected = safeItems.length > 0 && selectedIds.length === safeItems.length;
+    const sortedItems = useMemo(() => {
+        if (!sortKey) return safeItems;
+        const withIndex = safeItems.map((item, idx) => ({ item, idx }));
+        const dir = sortDir === "asc" ? 1 : -1;
+        return withIndex.sort((a, b) => {
+            const av = a.item?.[sortKey];
+            const bv = b.item?.[sortKey];
+            if (sortKey === "priority") {
+                const an = Number(av ?? 0);
+                const bn = Number(bv ?? 0);
+                if (an !== bn) return (an - bn) * dir;
+            } else {
+                const as = String(av ?? "");
+                const bs = String(bv ?? "");
+                const cmp = as.localeCompare(bs, "zh-Hant", { numeric: true, sensitivity: "base" });
+                if (cmp !== 0) return cmp * dir;
+            }
+            return (a.idx - b.idx) * dir;
+        }).map(({ item }) => item);
+    }, [safeItems, sortKey, sortDir]);
+
+    const toggleSort = (key) => {
+        if (sortKey === key) {
+            setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setSortKey(key);
+            setSortDir("asc");
+        }
+    };
+
+    const sortIndicator = (key) => {
+        if (sortKey !== key) return "↕";
+        return sortDir === "asc" ? "▲" : "▼";
+    };
 
     return (
         <div className={`data-table ${isGlossary ? "is-glossary" : "is-tm"}`}>
@@ -299,20 +383,48 @@ function DataTable({ items, isGlossary, editingKey, draft, saving, selectedIds, 
                 <div className="data-cell w-10 shrink-0 flex items-center justify-center">
                     <input type="checkbox" checked={allSelected} onChange={(e) => onSelectAll(e.target.checked)} />
                 </div>
-                <div className="data-cell">{t("manage.table.source_lang")}</div>
-                <div className="data-cell">{t("manage.table.target_lang")}</div>
-                <div className="data-cell">{t("manage.table.source")}</div>
-                <div className="data-cell">{t("manage.table.target")}</div>
-                {isGlossary && <div className="data-cell">{t("manage.table.priority")}</div>}
+                <div className="data-cell">
+                    <button type="button" className="sort-btn" onClick={() => toggleSort("source_lang")} aria-label={`${t("manage.table.source_lang")} 排序`}>
+                        {t("manage.table.source_lang")}
+                        <span className="sort-indicator">{sortIndicator("source_lang")}</span>
+                    </button>
+                </div>
+                <div className="data-cell">
+                    <button type="button" className="sort-btn" onClick={() => toggleSort("target_lang")} aria-label={`${t("manage.table.target_lang")} 排序`}>
+                        {t("manage.table.target_lang")}
+                        <span className="sort-indicator">{sortIndicator("target_lang")}</span>
+                    </button>
+                </div>
+                <div className="data-cell">
+                    <button type="button" className="sort-btn" onClick={() => toggleSort("source_text")} aria-label={`${t("manage.table.source")} 排序`}>
+                        {t("manage.table.source")}
+                        <span className="sort-indicator">{sortIndicator("source_text")}</span>
+                    </button>
+                </div>
+                <div className="data-cell">
+                    <button type="button" className="sort-btn" onClick={() => toggleSort("target_text")} aria-label={`${t("manage.table.target")} 排序`}>
+                        {t("manage.table.target")}
+                        <span className="sort-indicator">{sortIndicator("target_text")}</span>
+                    </button>
+                </div>
+                {isGlossary && (
+                    <div className="data-cell">
+                        <button type="button" className="sort-btn" onClick={() => toggleSort("priority")} aria-label={`${t("manage.table.priority")} 排序`}>
+                            {t("manage.table.priority")}
+                            <span className="sort-indicator">{sortIndicator("priority")}</span>
+                        </button>
+                    </div>
+                )}
                 <div className="data-cell data-actions">{t("manage.table.actions")}</div>
             </div>
-            {(items || []).map((item, idx) => {
+            {(sortedItems || []).map((item, idx) => {
                 const rowKey = makeKey(item);
                 const isEditing = editingKey === rowKey;
                 const row = isEditing ? draft || item : item;
                 const isSelected = selectedIds.includes(item.id);
+                const rowStyle = row?.is_new ? { backgroundColor: highlightColor } : undefined;
                 return (
-                    <div className={`data-row ${isSelected ? "is-selected" : ""}`} key={`tm-${idx}`}>
+                    <div className={`data-row ${isSelected ? "is-selected" : ""}`} key={`tm-${idx}`} style={rowStyle}>
                         <div className="data-cell w-10 shrink-0 flex items-center justify-center">
                             <input type="checkbox" checked={isSelected} onChange={(e) => onSelectRow(item.id, e.target.checked)} />
                         </div>

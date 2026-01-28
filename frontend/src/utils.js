@@ -1,6 +1,7 @@
 /**
  * Utility functions for PPT Translate
  */
+import i18n from "./i18n";
 
 // Regex patterns for language detection
 export const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf]/;
@@ -36,9 +37,9 @@ export function isConnectionRefused(message) {
  */
 export function formatModelDetectHint(message) {
     if (isConnectionRefused(message) || (message || "").includes("Ollama")) {
-        return "請檢查：\n1. Ollama 服務是否啟動\n2. Base URL 是否正確\n3. 模型是否已下載";
+        return i18n.t("utils.model_detect_hint.ollama");
     }
-    return "請檢查：\n1. API Key 是否正確\n2. 模型名稱是否存在\n3. 網路連線是否正常";
+    return i18n.t("utils.model_detect_hint.generic");
 }
 
 /**

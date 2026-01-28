@@ -70,13 +70,7 @@
     }
 
     .accordion-section::after {
-        content: "";
-        @apply absolute left-[27px] top-10 bottom-0 w-[1px] bg-slate-200 -z-10;
-        display: none;
-    }
-
-    .accordion-section:not(:last-child)::after {
-        display: block;
+        content: none;
     }
 
     .accordion-section.is-open {

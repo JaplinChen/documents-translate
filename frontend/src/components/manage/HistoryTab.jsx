@@ -12,6 +12,14 @@ export default function HistoryTab({ onLoadFile }) {
         fetchHistory();
     }, []);
 
+    const getFileExt = (filename) => {
+        const lower = filename.toLowerCase();
+        if (lower.endsWith(".json")) return "json";
+        if (lower.endsWith(".docx")) return "docx";
+        if (lower.endsWith(".pptx")) return "pptx";
+        return "unknown";
+    };
+
     const fetchHistory = async () => {
         setLoading(true);
         try {
@@ -29,12 +37,21 @@ export default function HistoryTab({ onLoadFile }) {
 
     const handleDownload = (filename) => {
         const encoded = encodeURIComponent(filename);
-        const fileType = filename.toLowerCase().endsWith(".docx") ? "docx" : "pptx";
+        const fileExt = getFileExt(filename);
+        if (fileExt === "json") {
+            window.open(`${API_BASE}/api/pptx/download/${encoded}`, "_blank");
+            return;
+        }
+        const fileType = fileExt === "docx" ? "docx" : "pptx";
         window.open(`${API_BASE}/api/${fileType}/download/${encoded}`, "_blank");
     };
 
     const handleLoad = async (item) => {
         if (!onLoadFile) return;
+        if (getFileExt(item.filename) === "json") {
+            alert(t("history.load_json_blocked"));
+            return;
+        }
         setLoadingFile(item.filename);
         try {
             const encoded = encodeURIComponent(item.filename);
@@ -63,10 +80,11 @@ export default function HistoryTab({ onLoadFile }) {
     };
 
     const handleDelete = async (item) => {
-        if (!window.confirm(t("history.confirm_delete", "Delete this file?"))) return;
+        if (!window.confirm(t("history.confirm_delete"))) return;
         try {
             const encoded = encodeURIComponent(item.filename);
-            const fileType = item.filename.toLowerCase().endsWith(".docx") ? "docx" : "pptx";
+            const fileExt = getFileExt(item.filename);
+            const fileType = fileExt === "docx" ? "docx" : "pptx";
             const res = await fetch(`${API_BASE}/api/${fileType}/history/${encoded}`, { method: "DELETE" });
             if (res.ok) fetchHistory();
         } catch (e) {
@@ -75,12 +93,12 @@ export default function HistoryTab({ onLoadFile }) {
     };
 
     const handleResetAll = async () => {
-        if (!window.confirm(t("history.confirm_reset_all", "警告：這將永久刪除所有翻譯記憶庫 (TM)、用語集快取以及歷史匯出檔案。是否確定執行？"))) return;
+        if (!window.confirm(t("history.confirm_reset_all"))) return;
         try {
             const res = await fetch(`${API_BASE}/api/admin/reset-cache`, { method: "POST" });
             if (res.ok) {
                 const data = await res.json();
-                alert(t("history.reset_success", "清理完成，已刪除 {{count}} 個檔案", { count: data.deleted_files }));
+                alert(t("history.reset_success", { count: data.deleted_files }));
                 fetchHistory();
             }
         } catch (e) {
@@ -92,28 +110,28 @@ export default function HistoryTab({ onLoadFile }) {
         <div className="history-tab-content">
             <div className="flex justify-between items-center mb-4 px-4 py-2 bg-amber-50 border border-amber-100 rounded-lg">
                 <div className="text-sm text-amber-800 font-medium flex items-center gap-2">
-                    ⚠️ {t("history.reset_warning", "管理提示：若想徹底重新翻譯或清除庫存，請點擊右側按鈕")}
+                    ⚠️ {t("history.reset_warning")}
                 </div>
                 <button
                     className="btn btn-sm danger flex items-center gap-1 py-1 h-8"
                     onClick={handleResetAll}
                 >
-                    🗑️ {t("history.reset_all", "清理所有快取與檔案")}
+                    🗑️ {t("history.reset_all")}
                 </button>
             </div>
             {loading ? (
-                <div className="p-4 text-center text-slate-500">{t("common.loading", "Loading...")}</div>
+                <div className="p-4 text-center text-slate-500">{t("common.loading")}</div>
             ) : items.length === 0 ? (
-                <div className="p-4 text-center text-slate-400">{t("history.empty", "No history found")}</div>
+                <div className="p-4 text-center text-slate-400">{t("history.empty")}</div>
             ) : (
                 <div className="history-list max-h-[600px] overflow-y-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
                             <tr>
-                                <th className="px-4 py-2">{t("history.filename", "File Name")}</th>
-                                <th className="px-4 py-2 w-32">{t("history.date", "Date")}</th>
-                                <th className="px-4 py-2 w-20">{t("history.size", "Size")}</th>
-                                <th className="px-4 py-2 w-32 text-center">{t("history.actions", "Actions")}</th>
+                                <th className="px-4 py-2">{t("history.filename")}</th>
+                                <th className="px-4 py-2 w-32">{t("history.date")}</th>
+                                <th className="px-4 py-2 w-20">{t("history.size")}</th>
+                                <th className="px-4 py-2 w-32 text-center">{t("history.actions")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -132,22 +150,22 @@ export default function HistoryTab({ onLoadFile }) {
                                         <button
                                             className="action-btn-sm primary"
                                             onClick={() => handleDownload(item.filename)}
-                                            title={t("common.download", "Download")}
+                                            title={t("common.download")}
                                         >
                                             ⬇
                                         </button>
                                         <button
                                             className="action-btn-sm secondary"
                                             onClick={() => handleLoad(item)}
-                                            disabled={!!loadingFile}
-                                            title={t("history.load", "Load into Editor")}
+                                            disabled={!!loadingFile || getFileExt(item.filename) === "json"}
+                                            title={t("history.load")}
                                         >
                                             {loadingFile === item.filename ? "..." : "📂"}
                                         </button>
                                         <button
                                             className="action-btn-sm danger hover:bg-red-100 text-red-600"
                                             onClick={() => handleDelete(item)}
-                                            title={t("common.delete", "Delete")}
+                                            title={t("common.delete")}
                                         >
                                             🗑️
                                         </button>

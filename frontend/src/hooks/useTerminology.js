@@ -1,15 +1,26 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "../constants";
 import { useUIStore } from "../store/useUIStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 import { useFileStore } from "../store/useFileStore";
 
+const PRESERVE_CATEGORY_TRANSLATION = "翻譯術語";
+
 export function useTerminology() {
+    const { t } = useTranslation();
     const [glossaryItems, setGlossaryItems] = useState([]);
     const [tmItems, setTmItems] = useState([]);
+    const [glossaryTotal, setGlossaryTotal] = useState(0);
+    const [tmTotal, setTmTotal] = useState(0);
+    const [glossaryLimit, setGlossaryLimit] = useState(200);
+    const [tmLimit, setTmLimit] = useState(200);
 
     // Store Integration
-    const { setManageOpen, setManageTab, manageOpen, manageTab, sourceLang, targetLang } = useUIStore();
+    const {
+        setManageOpen, setManageTab, manageOpen, manageTab, sourceLang, targetLang,
+        setLastGlossaryAt, setLastMemoryAt, setLastPreserveAt
+    } = useUIStore();
     const { useTm, setUseTm } = useSettingsStore();
 
     // --- Initial Load ---
@@ -18,21 +29,42 @@ export function useTerminology() {
         loadMemory();
     }, []);
 
-    const loadGlossary = async () => {
+    const loadGlossary = async (limitOverride) => {
+        const limit = limitOverride ?? glossaryLimit;
         try {
-            const response = await fetch(`${API_BASE}/api/tm/glossary`);
+            const response = await fetch(`${API_BASE}/api/tm/glossary?limit=${limit}`);
             const data = await response.json();
-            setGlossaryItems(data.items || []);
+            const { lastGlossaryAt: latestGlossaryAt } = useUIStore.getState();
+            const parsed = (data.items || []).map((item) => {
+                if (!item?.created_at || !latestGlossaryAt) return { ...item, is_new: false };
+                const iso = item.created_at.replace(" ", "T") + "Z";
+                const createdTs = Date.parse(iso);
+                return { ...item, is_new: !Number.isNaN(createdTs) && createdTs >= latestGlossaryAt };
+            });
+            setGlossaryItems(parsed);
+            setGlossaryTotal(data.total ?? parsed.length);
+            setGlossaryLimit(limit);
         } catch (error) {
             console.error("Failed to load glossary:", error);
         }
     };
 
-    const loadMemory = async () => {
+    const loadMemory = async (limitOverride) => {
+        const limit = limitOverride ?? tmLimit;
         try {
-            const response = await fetch(`${API_BASE}/api/tm/memory`);
+            const response = await fetch(`${API_BASE}/api/tm/memory?limit=${limit}`);
             const data = await response.json();
-            setTmItems(data.items || []);
+            const { lastTranslationAt: latestTranslationAt, lastMemoryAt: latestMemoryAt } = useUIStore.getState();
+            const baseStamp = Math.max(latestTranslationAt || 0, latestMemoryAt || 0) || null;
+            const parsed = (data.items || []).map((item) => {
+                if (!item?.created_at || !baseStamp) return { ...item, is_new: false };
+                const iso = item.created_at.replace(" ", "T") + "Z";
+                const createdTs = Date.parse(iso);
+                return { ...item, is_new: !Number.isNaN(createdTs) && createdTs >= baseStamp };
+            });
+            setTmItems(parsed);
+            setTmTotal(data.total ?? parsed.length);
+            setTmLimit(limit);
         } catch (error) {
             console.error("Failed to load memory:", error);
         }
@@ -40,6 +72,7 @@ export function useTerminology() {
 
     const upsertGlossary = async (blockOrEntry) => {
         console.log("Upserting glossary with input:", blockOrEntry);
+        setLastGlossaryAt(Date.now());
         // Ensure we prioritize data directly from the block to avoid stale context issues
         const entry = {
             id: blockOrEntry.id, // Support updating existing records
@@ -64,7 +97,7 @@ export function useTerminology() {
             if (!resp.ok) {
                 const err = await resp.text();
                 console.error("Glossary upsert failed server-side:", err);
-                alert("儲存術語失敗: " + err);
+                alert(t("manage.alerts.save_glossary_failed", { message: err }));
             } else {
                 console.log("Glossary upsert success");
                 await loadGlossary();
@@ -85,6 +118,7 @@ export function useTerminology() {
 
     const upsertMemory = async (blockOrEntry) => {
         console.log("Upserting memory with input:", blockOrEntry);
+        setLastMemoryAt(Date.now());
         const entry = {
             source_lang: blockOrEntry.source_lang || sourceLang || "vi",
             target_lang: blockOrEntry.target_lang || targetLang || "zh-TW",
@@ -106,7 +140,7 @@ export function useTerminology() {
             if (!resp.ok) {
                 const err = await resp.text();
                 console.error("Memory upsert failed server-side:", err);
-                alert("儲存記憶失敗: " + err);
+                alert(t("manage.alerts.save_memory_failed", { message: err }));
             } else {
                 console.log("Memory upsert success");
                 await loadMemory();
@@ -126,13 +160,14 @@ export function useTerminology() {
     };
 
     const clearMemory = async () => {
-        if (!window.confirm("確定要清除全部翻譯記憶嗎？此動作無法復原。")) return;
+        if (!window.confirm(t("manage.confirm.clear_memory"))) return;
         await fetch(`${API_BASE}/api/tm/memory/clear`, { method: "DELETE" });
         await loadMemory();
     };
 
     const convertMemoryToGlossary = async (item) => {
         if (!item?.source_text || !item?.target_text) return;
+        setLastGlossaryAt(Date.now());
         await upsertGlossary({
             source_lang: item.source_lang,
             target_lang: item.target_lang,
@@ -143,12 +178,14 @@ export function useTerminology() {
         if (item.id) await deleteMemory({ id: item.id });
     };
 
-    const convertGlossaryToPreserveTerm = async (item) => {
+    const convertGlossaryToPreserveTerm = async (item, options = {}) => {
+        const { silent = false } = options;
         if (!item?.source_text) return;
         try {
+            setLastPreserveAt(Date.now());
             const params = new URLSearchParams();
             params.append("source_text", item.source_text);
-            params.append("category", "翻譯術語");
+            params.append("category", PRESERVE_CATEGORY_TRANSLATION);
             params.append("case_sensitive", "true");
 
             const response = await fetch(`${API_BASE}/api/preserve-terms/convert-from-glossary?${params.toString()}`, {
@@ -157,8 +194,9 @@ export function useTerminology() {
 
             if (!response.ok) {
                 const error = await response.json();
-                alert(error.detail || "轉換失敗");
-                return;
+                const msg = error.detail || t("manage.alerts.convert_failed");
+                if (!silent) alert(msg);
+                return { ok: false, error: msg };
             }
 
             const data = await response.json();
@@ -166,27 +204,33 @@ export function useTerminology() {
             if (item.id) {
                 await deleteGlossary({ id: item.id });
             }
-            alert(data.message || `已將 "${item.source_text}" 添加到保留術語`);
+            if (!silent) alert(data.message || t("manage.alerts.convert_success", { text: item.source_text }));
+            return { ok: true, message: data.message };
         } catch (error) {
             console.error("Failed to convert to preserve term:", error);
-            alert("轉換失敗：" + error.message);
+            if (!silent) alert(t("manage.alerts.convert_failed_detail", { message: error.message }));
+            return { ok: false, error: error.message };
         }
     };
 
     const handleSeedTm = async () => {
+        const now = Date.now();
+        setLastGlossaryAt(now);
+        setLastMemoryAt(now);
         await fetch(`${API_BASE}/api/tm/seed`, { method: "POST" });
         await loadGlossary();
         await loadMemory();
     };
 
     const clearGlossary = async () => {
-        if (!window.confirm("確定要清除全部術語嗎？此動作無法復原。")) return;
+        if (!window.confirm(t("manage.confirm.clear_glossary"))) return;
         await fetch(`${API_BASE}/api/tm/glossary/clear`, { method: "DELETE" });
         await loadGlossary();
     };
 
     const batchUpsertGlossary = async (entries) => {
         if (!entries || entries.length === 0) return;
+        setLastGlossaryAt(Date.now());
         await fetch(`${API_BASE}/api/tm/glossary/batch`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -195,13 +239,14 @@ export function useTerminology() {
         await loadGlossary();
     };
 
-    const handleExtractGlossary = async ({ blocks, targetLang, llmProvider, llmApiKey, llmBaseUrl, llmModel, setStatus, setBusy }) => {
+    const handleExtractGlossary = async ({ blocks, sourceLang, targetLang, llmProvider, llmApiKey, llmBaseUrl, llmModel, setStatus, setBusy }) => {
         if (!blocks || blocks.length === 0) {
-            setStatus("請先抽取區塊");
+            setStatus(t("status.no_blocks"));
             return;
         }
         setBusy(true);
-        setStatus("正在智慧提取術語...");
+        setLastPreserveAt(Date.now());
+        setStatus(t("manage.glossary_extract.processing"));
         try {
             const formData = new FormData();
             formData.append("blocks", JSON.stringify(blocks));
@@ -219,16 +264,16 @@ export function useTerminology() {
                 body: formData
             });
 
-            if (!response.ok) throw new Error("提取失敗");
+            if (!response.ok) throw new Error(t("manage.glossary_extract.failed"));
             const data = await response.json();
             if (data.error) {
-                setStatus(`提取失敗：${data.error}`);
+                setStatus(t("manage.glossary_extract.failed_detail", { message: data.error }));
                 return;
             }
             const rawTerms = data.terms || [];
 
             if (rawTerms.length === 0) {
-                setStatus("未偵測到明顯術語");
+                setStatus(t("manage.glossary_extract.empty"));
             } else {
                 // Client-side de-duplication based on source text
                 const uniqueTermsMap = new Map();
@@ -236,7 +281,7 @@ export function useTerminology() {
                     const key = t.source.toLowerCase().trim();
                     if (!uniqueTermsMap.has(key)) {
                         uniqueTermsMap.set(key, {
-                            source_lang: "auto",
+                            source_lang: sourceLang || "auto",
                             target_lang: targetLang,
                             source_text: t.source,
                             target_text: t.target,
@@ -246,27 +291,54 @@ export function useTerminology() {
                 });
 
                 const termsToUpsert = Array.from(uniqueTermsMap.values());
-                await batchUpsertGlossary(termsToUpsert);
+                const payload = {
+                    terms: termsToUpsert.map((term) => ({
+                        term: term.source_text,
+                        category: PRESERVE_CATEGORY_TRANSLATION,
+                        case_sensitive: true
+                    }))
+                };
+                const resp = await fetch(`${API_BASE}/api/preserve-terms/batch`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error(t("manage.glossary_extract.failed"));
+                const result = await resp.json();
+                const createdCount = result.created ?? termsToUpsert.length;
 
-                setStatus(`智慧提取成功，新增 ${termsToUpsert.length} 筆術語`);
+                setStatus(t("manage.glossary_extract.success", { count: createdCount }));
                 setManageOpen(true);
-                setManageTab("glossary");
+                setManageTab("preserve");
             }
         } catch (error) {
             console.error("Failed to extract glossary:", error);
-            setStatus(`提取失敗：${error.message}`);
+            setStatus(t("manage.glossary_extract.failed_detail", { message: error.message }));
         } finally {
             setBusy(false);
         }
     };
 
+    const loadMoreGlossary = async () => {
+        const next = glossaryLimit + 200;
+        await loadGlossary(next);
+    };
+
+    const loadMoreMemory = async () => {
+        const next = tmLimit + 200;
+        await loadMemory(next);
+    };
+
     return {
         glossaryItems, tmItems,
+        glossaryTotal, tmTotal,
+        glossaryLimit, tmLimit,
         useTm, setUseTm,
         manageOpen, setManageOpen, // Exposed via store, but can also be accessed directly
         manageTab, setManageTab,
 
         loadGlossary, loadMemory,
+        loadMoreGlossary, loadMoreMemory,
         upsertGlossary, deleteGlossary,
         upsertMemory, deleteMemory,
         clearMemory,

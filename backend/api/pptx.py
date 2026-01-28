@@ -163,12 +163,15 @@ async def pptx_download(filename: str):
     content_disposition = (
         f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{safe_name}"
     )
+    media_type = (
+        "application/json"
+        if file_path.suffix.lower() == ".json"
+        else "application/vnd.openxmlformats-officedocument."
+        "presentationml.presentation"
+    )
     return FileResponse(
         path=file_path,
-        media_type=(
-            "application/vnd.openxmlformats-officedocument."
-            "presentationml.presentation"
-        ),
+        media_type=media_type,
         headers={
             "Content-Disposition": content_disposition,
             "Access-Control-Expose-Headers": "Content-Disposition",

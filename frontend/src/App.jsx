@@ -110,6 +110,7 @@ function App() {
           onExtract={processor.handleExtract}
           onExtractGlossary={() => tm.handleExtractGlossary({
             blocks: fileStore.blocks,
+            sourceLang: ui.sourceLang,
             targetLang: ui.targetLang,
             llmProvider: settings.llmProvider,
             llmApiKey: settings.providers[settings.llmProvider]?.apiKey,
@@ -178,7 +179,7 @@ function App() {
           // Auto-saved by store action updates, just close?
           // But UI shows "Status: saved".
           // SettingsModal calls onSave manually.
-          settings.setLlmStatus("已儲存設定"); // Fake status update
+          settings.setLlmStatus(t("settings.status.saved"));
           ui.setLlmOpen(false);
         }}
         onSaveCorrection={() => {
@@ -203,6 +204,7 @@ function App() {
 
         onExtractGlossary={() => tm.handleExtractGlossary({
           blocks: fileStore.blocks,
+          sourceLang: ui.sourceLang,
           targetLang: ui.targetLang,
           llmProvider: settings.llmProvider,
           llmApiKey: settings.providers[settings.llmProvider]?.apiKey,
@@ -227,6 +229,10 @@ function App() {
         defaultTargetLang={ui.targetLang || "zh-TW"}
         glossaryItems={tm.glossaryItems}
         tmItems={tm.tmItems}
+        glossaryTotal={tm.glossaryTotal}
+        tmTotal={tm.tmTotal}
+        onLoadMoreGlossary={tm.loadMoreGlossary}
+        onLoadMoreMemory={tm.loadMoreMemory}
         onSeed={tm.handleSeedTm}
         onUpsertGlossary={tm.upsertGlossary}
         onDeleteGlossary={tm.deleteGlossary}
